@@ -11,9 +11,9 @@ description: 由独立 agent 逐条审计原始设计、批准 spec、代码 dif
 
 ## 审计流程
 
-1. 校验设计基线 hash、spec 版本/hash 和审批记录。过期或未批准时判 `BLOCKED`。
+1. 读取 Spec 工具 profile，确认权威工件位置和 ID 映射；校验设计基线 hash、原生 spec 版本/hash 和审批记录。过期或未批准时判 `BLOCKED`。
 2. 沿来源引用重读原文，独立推导每个 `TEST-*` 的期望；检查 spec 是否歪曲或遗漏原设计。
-3. 确认 `source-coverage.csv` 无遗漏，再运行 `python scripts/check_traceability.py .specflow/traceability.csv`。前者是原文覆盖表，后者必须使用需求交付追溯 schema；两者不得混用。
+3. 确认 `source-coverage.csv` 无遗漏，再运行 `python scripts/check_traceability.py .specflow/traceability.csv`。追溯矩阵可以引用 Spec Kit/OpenSpec/Kiro 的原生工件和任务 ID，不要求复制其内容；前者是原文覆盖表，后者是跨工具交付追溯，不得混用。
 4. 审查 diff：每项变更必须有任务授权；任务要求必须有实现映射；识别越界重构和反向修改验收标准。
 5. 独立执行指定命令。检查退出码、跳过项、测试计数、环境和产物，而非复述实施报告。
 6. 对正例、反例、边界、非法状态及关键不变量做需求级黑盒检查；关键规则必要时补充审计测试，但不得在审计中修实现。

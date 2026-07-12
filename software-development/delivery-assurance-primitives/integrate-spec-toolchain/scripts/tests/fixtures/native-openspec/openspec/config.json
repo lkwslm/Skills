@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "artifact_roots": {
+    "spec": "openspec/specs",
+    "design": "openspec/designs",
+    "tasks": "openspec/tasks"
+  },
+  "capabilities": ["spec", "design", "tasks", "implement", "lifecycle"],
+  "commands": {"implement": "openspec apply --json", "lifecycle": "openspec verify --json"},
+  "extensions": []
+}

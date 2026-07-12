@@ -1,0 +1,1 @@
+{"suite":"greenfield","objects":[{"object_id":"DEL-1","kind":"greenfield","state":"verified"}],"transitions":[{"object_id":"DEL-1","old_state":"captured","new_state":"verified","actor":"orchestrator","at":"2026-01-01T00:00:00Z","input_versions":["SRC@1"],"evidence_refs":["EVID-1"],"gate_result":"PASS"}]}

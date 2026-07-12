@@ -1,0 +1,4 @@
+interface:
+  display_name: "Integrate Spec Toolchain"
+  short_description: "Detect and map authoritative spec tooling"
+  default_prompt: "Use $integrate-spec-toolchain to detect and map this repository's spec tooling."

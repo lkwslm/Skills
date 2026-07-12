@@ -1,0 +1,4 @@
+interface:
+  display_name: "Control Production Release"
+  short_description: "Gate and control authorized production release"
+  default_prompt: "Use $control-production-release to prepare or control this authorized release."

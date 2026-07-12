@@ -1,0 +1,4 @@
+interface:
+  display_name: "System Realization Orchestrator"
+  short_description: "Orchestrate governed greenfield system delivery"
+  default_prompt: "Use $orchestrate-system-realization to govern delivery of an approved system design."

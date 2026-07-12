@@ -1,0 +1,4 @@
+interface:
+  display_name: "System Design Baseline"
+  short_description: "Build a traceable, versioned design baseline"
+  default_prompt: "Use $establish-system-design-baseline to baseline these system design sources."

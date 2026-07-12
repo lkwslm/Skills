@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "spec-structure.schema.json",
+  "type": "object",
+  "required": ["spec_id", "version", "source_ids", "non_goals", "behaviors", "acceptance_criteria", "tasks"],
+  "additionalProperties": false,
+  "properties": {
+    "spec_id": {"type": "string", "pattern": "^SPEC-[A-Za-z0-9-]+$"},
+    "version": {"type": "string", "minLength": 1},
+    "source_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "non_goals": {"type": "array", "items": {"type": "string"}},
+    "behaviors": {
+      "type": "object",
+      "required": ["positive", "negative", "boundary", "failure"],
+      "additionalProperties": false,
+      "properties": {
+        "positive": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "negative": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "boundary": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "failure": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "acceptance_criteria": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["criterion_id", "test_id", "observable"], "additionalProperties": false, "properties": {"criterion_id": {"type": "string", "minLength": 1}, "test_id": {"type": "string", "pattern": "^TEST-[A-Za-z0-9-]+$"}, "observable": {"type": "string", "minLength": 1}}}},
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["task_id", "depends_on", "write_scope", "verification_commands"],
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {"type": "string", "pattern": "^TASK-[A-Za-z0-9-]+$"},
+          "depends_on": {"type": "array", "items": {"type": "string"}},
+          "write_scope": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+          "verification_commands": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+        }
+      }
+    }
+  }
+}

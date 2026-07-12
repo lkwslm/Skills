@@ -11,17 +11,20 @@ description: 编排从长篇系统设计文档到需求基线、可验证规格�
 
 只负责编排、门禁和状态迁移，不代替专职角色产出或审批自己的工作。
 
+优先复用仓库已有的 Spec Kit、OpenSpec、Kiro Specs 或同类工具。把工具原生工件作为权威来源，不再生成一套内容相同的平行 spec、plan 或 tasks；本技能只补充工具缺少的来源追溯、上下文分层、角色隔离和独立验收。
+
 ## 启动流程
 
 1. 读取项目指令、仓库状态、设计文档入口和已有 `.specflow/`。
-2. 若 `.specflow/` 不存在，从 [project-layout.md](references/project-layout.md) 选择最小目录并创建。
-3. 调用 `$index-design-docs` 建立或更新设计基线。长文档不得直接进入编码。
-4. 阻断所有高影响冲突、歧义和缺失决策；让用户或有授权的负责人裁决。
-5. 调用 `$write-verifiable-spec` 生成或修订 spec、任务和追溯关系。
-6. 要求人工明确批准 spec 基线。批准前不得实施。
-7. 每次只把一个已批准、依赖满足的任务交给 `$implement-spec-task`。
-8. 用与实现者不同的 agent 调用 `$audit-spec-conformance`。只传原始工件、diff 和运行证据，不传实现者的推理结论。
-9. 仅在审计通过后标记任务完成并领取下一项；每个垂直切片后运行关键集成或 E2E 检查。
+2. 按 [spec-tool-integration.md](references/spec-tool-integration.md) 探测 Spec 工具、版本、工件根目录和可用命令；已有工具必须优先复用。未经用户同意不得初始化第二套工具。
+3. 记录工具 profile 和权威工件映射。若没有工具且用户不选择工具，才从 [project-layout.md](references/project-layout.md) 使用内置 Markdown/CSV 回退布局。
+4. 调用 `$index-design-docs` 建立或更新设计基线。长文档不得直接进入编码。
+5. 阻断所有高影响冲突、歧义和缺失决策；让用户或有授权的负责人裁决。
+6. 通过已选工具的原生工作流生成或修订 spec、plan/design 和 tasks；让 `$write-verifiable-spec` 检查和增强原生工件，而不是复制它们。
+7. 要求人工明确批准工具中的 spec 基线。批准前不得实施。
+8. 每次只把一个已批准、依赖满足的原生任务交给 `$implement-spec-task`，并保留工具任务 ID。
+9. 用与实现者不同的 agent 调用 `$audit-spec-conformance`。只传原始工件、diff 和运行证据，不传实现者的推理结论。
+10. 仅在审计通过后标记任务完成并领取下一项；每个垂直切片后运行关键集成或 E2E 检查。
 
 ## 角色隔离
 
@@ -58,7 +61,7 @@ description: 编排从长篇系统设计文档到需求基线、可验证规格�
 
 ## 工具选择
 
-默认使用仓库内 Markdown/CSV、Git、测试框架和 CI，避免工具锁定。需要现成框架时读取 [tool-landscape.md](references/tool-landscape.md)，按团队环境选择；工具不能替代角色隔离、原文引用和独立验收。
+读取 [tool-landscape.md](references/tool-landscape.md) 和 [spec-tool-integration.md](references/spec-tool-integration.md)。优先沿用仓库已采用的工具；新项目再按场景和团队环境选择。工具负责它已经擅长的 spec、plan/design、tasks 和执行，本技能负责跨工具治理。禁止同时维护内容等价的 `.specflow/specs` 与工具原生 spec。
 
 ## 完成报告
 

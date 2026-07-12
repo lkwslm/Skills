@@ -1,0 +1,7 @@
+{"suite":"brownfield","objects":[{"object_id":"CR-1","kind":"brownfield","state":"release_ready"}],"transitions":[
+  {"object_id":"CR-1","old_state":"captured","new_state":"baselined","actor":"brownfield-orchestrator","at":"2026-01-01T00:10:00Z","input_versions":["CR-1@1"],"evidence_refs":["APP-B1"],"gate_result":"PASS"},
+  {"object_id":"CR-1","old_state":"baselined","new_state":"planned","actor":"brownfield-orchestrator","at":"2026-01-01T00:20:00Z","input_versions":["CR-1@1"],"evidence_refs":["APP-B1"],"gate_result":"PASS"},
+  {"object_id":"CR-1","old_state":"planned","new_state":"executing","actor":"brownfield-orchestrator","at":"2026-01-01T00:21:00Z","input_versions":["CR-1@1"],"evidence_refs":["APP-B1"],"gate_result":"PASS"},
+  {"object_id":"CR-1","old_state":"executing","new_state":"implementation_accepted","actor":"brownfield-orchestrator","at":"2026-01-01T00:50:00Z","input_versions":["CR-1@1"],"evidence_refs":["AUDIT-B1"],"gate_result":"PASS"},
+  {"object_id":"CR-1","old_state":"implementation_accepted","new_state":"release_ready","actor":"brownfield-orchestrator","at":"2026-01-01T01:00:00Z","input_versions":["CR-1@1"],"evidence_refs":["AUDIT-B1"],"gate_result":"PASS"}
+]}
