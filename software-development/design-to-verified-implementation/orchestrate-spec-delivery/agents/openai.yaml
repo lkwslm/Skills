@@ -1,0 +1,4 @@
+interface:
+  display_name: "规格交付总控"
+  short_description: "编排长设计文档到规格、实施、独立验收的完整可追溯交付闭环"
+  default_prompt: "使用 $orchestrate-spec-delivery 将这些设计文档转化为可追溯、可验收的分步交付流程。"

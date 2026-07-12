@@ -1,0 +1,4 @@
+interface:
+  display_name: "按规格单步实施"
+  short_description: "一次只实现一个已批准规格任务，并留下代码、测试和命令级验证证据"
+  default_prompt: "使用 $implement-spec-task 实现下一个已批准的规格任务并提交证据。"
