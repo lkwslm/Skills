@@ -7,5 +7,10 @@
   },
   "capabilities": ["spec", "design", "tasks", "implement", "lifecycle"],
   "commands": {"implement": "openspec apply --json", "lifecycle": "openspec verify --json"},
+  "runtime": {
+    "executable": "openspec",
+    "version_args": ["--version"],
+    "declared_installation_source": "project toolchain"
+  },
   "extensions": []
 }

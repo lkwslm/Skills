@@ -2,13 +2,16 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "spec-tool-profile.schema.json",
   "type": "object",
-  "required": ["profile_id", "profile_hash", "provider", "mode", "version", "version_source", "artifact_root", "authorities", "id_mapping", "capabilities", "missing_controls", "command_entrypoints", "configuration", "extensions", "trust"],
+  "required": ["profile_id", "profile_hash", "provider", "mode", "version", "version_source", "artifact_root", "authorities", "id_mapping", "capabilities", "missing_controls", "command_entrypoints", "configuration", "extensions", "runtime", "adoption_options", "next_actions", "trust", "candidates"],
   "additionalProperties": false,
   "properties": {
     "profile_id": {"type": "string", "minLength": 1}, "profile_hash": {"type": "string", "minLength": 64},
     "provider": {"type": "string", "enum": ["spec-kit", "openspec", "kiro", "other", "fallback", "conflict"]}, "mode": {"type": "string", "enum": ["native", "adopt", "bridge", "fallback", "blocked"]}, "version": {"type": ["string", "null"]}, "version_source": {"type": ["string", "null"]}, "artifact_root": {"type": ["string", "null"]},
     "authorities": {"type": "object", "additionalProperties": {"type": "object", "required": ["uri", "writer"], "additionalProperties": false, "properties": {"uri": {"type": "string", "minLength": 1}, "writer": {"type": "string", "minLength": 1}}}},
     "id_mapping": {"type": "object"}, "capabilities": {"type": "array", "items": {"type": "string"}}, "missing_controls": {"type": "array", "items": {"type": "string"}}, "command_entrypoints": {"type": "object", "additionalProperties": {"type": "string"}}, "configuration": {"type": ["string", "null"]}, "extensions": {"type": "array", "items": {"type": "string"}},
+    "runtime": {"type": ["object", "null"], "additionalProperties": false, "required": ["executable", "resolved_path", "version_args", "expected_version", "observed_version", "declared_installation_source"], "properties": {"executable": {"type": ["string", "null"]}, "resolved_path": {"type": ["string", "null"]}, "version_args": {"type": ["array", "null"], "items": {"type": "string"}}, "expected_version": {"type": ["string", "null"]}, "observed_version": {"type": ["string", "null"]}, "declared_installation_source": {"type": ["string", "null"]}}},
+    "adoption_options": {"type": "array", "items": {"type": "string", "enum": ["spec-kit", "openspec", "kiro"]}, "uniqueItems": true},
+    "next_actions": {"type": "array", "items": {"type": "object", "required": ["action", "authorization_required"], "additionalProperties": false, "properties": {"action": {"type": "string", "minLength": 1}, "authorization_required": {"type": "array", "items": {"type": "string", "enum": ["installation", "initialization", "upgrade", "migration"]}, "uniqueItems": true}}}},
     "trust": {"type": "object", "required": ["level", "reasons"], "additionalProperties": false, "properties": {"level": {"type": "string", "enum": ["trusted", "review-required", "blocked"]}, "reasons": {"type": "array", "items": {"type": "string"}}}},
     "candidates": {"type": "array", "items": {"type": "string"}}
   }
