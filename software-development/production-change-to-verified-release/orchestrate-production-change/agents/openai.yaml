@@ -1,0 +1,4 @@
+interface:
+  display_name: "Production Change Orchestrator"
+  short_description: "Govern brownfield change through safe release"
+  default_prompt: "Use $orchestrate-production-change to govern this production-system change."

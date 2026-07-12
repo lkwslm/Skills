@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implement Bounded Production Change"
+  short_description: "Implement one reversible brownfield task"
+  default_prompt: "Use $implement-bounded-production-change to implement one approved change task."

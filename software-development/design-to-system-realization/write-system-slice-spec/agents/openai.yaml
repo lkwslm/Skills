@@ -1,0 +1,4 @@
+interface:
+  display_name: "Write System Slice Spec"
+  short_description: "Specify verifiable end-to-end system slices"
+  default_prompt: "Use $write-system-slice-spec to specify a verifiable vertical system slice."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Write Production Delta Spec"
+  short_description: "Specify safe, observable brownfield deltas"
+  default_prompt: "Use $write-production-delta-spec to specify this production change safely."

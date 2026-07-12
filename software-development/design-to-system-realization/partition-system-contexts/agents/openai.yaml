@@ -1,0 +1,4 @@
+interface:
+  display_name: "Partition System Contexts"
+  short_description: "Create governed L0 and L1 context packages"
+  default_prompt: "Use $partition-system-contexts to partition this baseline into domain contexts."

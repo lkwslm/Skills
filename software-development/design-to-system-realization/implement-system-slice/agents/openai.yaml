@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implement System Slice"
+  short_description: "Implement one approved greenfield slice safely"
+  default_prompt: "Use $implement-system-slice to implement one approved greenfield task."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Verify System Realization"
+  short_description: "Independently verify system-wide realization"
+  default_prompt: "Use $verify-system-realization to independently verify this system realization."

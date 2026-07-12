@@ -1,0 +1,4 @@
+interface:
+  display_name: "Discover Current System Behavior"
+  short_description: "Baseline real brownfield behavior and evidence"
+  default_prompt: "Use $discover-current-system-behavior to establish the current behavior baseline."

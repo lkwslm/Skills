@@ -1,0 +1,4 @@
+interface:
+  display_name: "Analyze Production Change Impact"
+  short_description: "Map blast radius, regression scope, and risk"
+  default_prompt: "Use $analyze-production-change-impact to map this change's blast radius."

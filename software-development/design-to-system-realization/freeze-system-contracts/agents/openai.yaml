@@ -1,0 +1,4 @@
+interface:
+  display_name: "Freeze System Contracts"
+  short_description: "Version and freeze cross-domain contracts"
+  default_prompt: "Use $freeze-system-contracts to freeze cross-domain contracts for this epoch."

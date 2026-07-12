@@ -1,0 +1,1 @@
+{"package_id":"L1-domain-b","level":"L1","version":"1","content_hash":"30303030","sources":[{"artifact_id":"REQ-1","version":"1","content_hash":"bbbbbbbb"}],"dependencies":["L0"],"read_scope":["design.md#domain-b"],"write_scope":[],"created_at":"2026-01-01T00:12:00Z","canonicalization_version":"1"}

@@ -1,0 +1,1 @@
+{"suite":"brownfield","run_id":"RUN-B1","target":"bounded production change fixture","risk_level":"medium","commit_hash":"87654321","spec_tool_profile":{"artifact_id":"PROFILE-FALLBACK","version":"1","content_hash":"f0f0f0f0"}}

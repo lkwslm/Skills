@@ -1,0 +1,4 @@
+interface:
+  display_name: "Verify Production Change"
+  short_description: "Independently verify brownfield change safety"
+  default_prompt: "Use $verify-production-change to independently verify this production change."

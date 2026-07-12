@@ -1,0 +1,1 @@
+{"nodes":[{"id":"REQ-1","type":"requirement","version":"1"},{"id":"AUDIT-1","type":"audit","version":"1"}],"edges":[{"from":"REQ-1","to":"AUDIT-1","relation":"audited_by","source_version":"1","created_by":"agent"}],"required_paths":[{"start":"REQ-1","via_types":["spec","task","implementation","test","evidence"],"end_type":"audit"}]}
