@@ -78,11 +78,14 @@ L2 垂直切片上下文包
 
 ### 3.3 应包含的 Skills
 
+本 Suite 必须依赖共享的 `integrate-spec-toolchain`。启动时先探测并复用现有 Spec 工具；下列 Skills 是治理角色，不是对 Spec Kit、OpenSpec 或 Kiro Specs 已有命令的重新实现。若工具已经提供 spec、plan/design、tasks 和执行能力，相关 Skill 应检查、增强和编排原生工件，而不是创建平行副本。
+
 #### Skill A1：`orchestrate-system-realization`
 
 **职责**
 
 - 管理从设计基线到系统验收的状态机；
+- 调用 `integrate-spec-toolchain`，把现有 Spec 工具生命周期映射到 Suite 门禁；
 - 创建专职 agent 并限制角色权限；
 - 决定领域处理顺序和垂直切片顺序；
 - 执行人工审批点和自动门禁；
@@ -98,6 +101,7 @@ L2 垂直切片上下文包
 **输出**
 
 - 系统交付状态；
+- Spec 工具 profile 和权威工件映射；
 - agent 任务包；
 - 阶段门禁结果；
 - 阻塞和待决策事项；
@@ -320,11 +324,14 @@ L2 垂直切片上下文包
 
 ### 4.3 应包含的 Skills
 
+本 Suite 同样必须依赖共享的 `integrate-spec-toolchain`。Brownfield 场景尤其要优先沿用仓库已有工具和 living specs。OpenSpec 的 change delta、Kiro 的 Feature/Bug Spec、Spec Kit 的现有项目工作流都可以成为权威工件；本 Suite 只补充现状证据、影响分析、兼容性、独立审计和生产发布门禁。
+
 #### Skill B1：`orchestrate-production-change`
 
 **职责**
 
 - 管理从变更请求到安全发布的状态机；
+- 调用 `integrate-spec-toolchain`，优先采用仓库已有的 change/spec 工作流；
 - 控制现状发现、影响分析、审批、实施和发布门禁；
 - 限制 agent 的代码和生产操作权限；
 - 维护变更窗口、风险等级、验证范围和回滚条件；
@@ -340,6 +347,7 @@ L2 垂直切片上下文包
 **输出**
 
 - 变更状态；
+- Spec 工具 profile 和权威工件映射；
 - 角色任务；
 - 审批和门禁结果；
 - 发布准备度；
@@ -536,11 +544,117 @@ L2 垂直切片上下文包
 
 ---
 
-## 5. 两套 Suite 的共享能力
+## 5. Spec 工具集成层
+
+### 5.1 定位
+
+两套 Suite 都不应重新实现成熟 Spec 工具已经提供的能力。Suite 的定位是：
+
+```text
+现有 Spec 工具
+负责 spec、plan/design、tasks、执行和原生生命周期
+            +
+Suite 治理层
+负责上下文分层、来源追溯、角色隔离、影响控制、独立验收和发布安全
+```
+
+当仓库已经使用 Spec Kit、OpenSpec、Kiro Specs 或其他工具时，其原生工件必须被视为权威来源。Suite 不得再维护一套内容等价的 spec 和 tasks。只有项目没有采用工具且用户明确不希望引入工具时，才使用内置 Markdown/CSV 回退格式。
+
+### 5.2 共享 Skill：`integrate-spec-toolchain`
+
+**职责**
+
+- 探测仓库当前使用的 Spec 工具、版本、工件目录和定制配置；
+- 识别原生 spec、plan/design、tasks、执行和生命周期入口；
+- 生成统一 profile 和 ID 映射；
+- 比较工具已有能力与 Suite 所需门禁，形成缺失能力清单；
+- 让后续 Skills 读写原生工件；
+- 在未检测到工具时给出选型建议，并在用户批准后初始化；
+- 防止多个工具同时争夺同一工件的写权限。
+
+**输入**
+
+- 仓库和项目指令；
+- 已有 spec 工件；
+- 可用 CLI、IDE 或 agent 集成；
+- 团队偏好和组织流程。
+
+**输出**
+
+- `spec-tool-profile`；
+- 权威工件位置；
+- 原生 ID 到 Suite 追溯 ID 的映射规则；
+- 可复用能力和缺失门禁；
+- 允许调用的原生命令；
+- 工具冲突或迁移风险。
+
+**设计原因**
+
+没有适配层时，每个 Skill 都会自行猜测目录和命令，容易重复生成工件或绕过工具生命周期。集中探测和映射可以让两套 Suite 保持工具无关，同时真正复用现有生态。
+
+### 5.3 集成模式
+
+| 模式 | 使用条件 | 行为 |
+|---|---|---|
+| `native` | 仓库已有 Spec 工具 | 原生工件为唯一权威来源，Suite 只维护 sidecar 追溯和证据 |
+| `adopt` | 仓库没有工具，用户批准引入 | 初始化所选工具并使用其原生流程，随后转为 `native` |
+| `bridge` | 组织已有外部规格系统或多个仓库 | 指定唯一权威端和单向同步方向，冲突必须人工处理 |
+| `fallback` | 用户不选择工具 | 使用 Suite 内置 Markdown/CSV，但保持未来可映射的 ID 和结构 |
+
+不得根据机器上存在某个 CLI 就自动进入 `native`；必须在仓库中找到项目工件或明确配置。初始化、升级和迁移工具都需要用户授权。
+
+### 5.4 工件映射
+
+| Suite 抽象能力 | GitHub Spec Kit | OpenSpec | Kiro Specs |
+|---|---|---|---|
+| 治理原则 | constitution、preset | schema/profile 与项目约定 | steering/project rules |
+| 需求或变化 | spec | capability spec、proposal、spec delta | requirements.md 或 bugfix.md |
+| 技术方案 | plan | design.md | design.md |
+| 任务 | tasks | tasks.md | tasks.md |
+| 实施 | implement | apply | 单任务执行或 `/spec run` |
+| 生命周期 | workflow、extension、gate | verify、archive | Spec 状态和 PR 工作流 |
+
+映射只保存位置、ID 和状态，不复制正文。实际命令和路径必须从已安装版本或官方文档探测，不能依赖模型记忆。
+
+### 5.5 工具选择建议
+
+#### Greenfield
+
+- **GitHub Spec Kit**：优先候选。它已经提供 Spec → Plan → Tasks → Implement，以及 workflow、人工 gate、extension 和 preset。Suite 应优先通过 preset/extension/workflow 注入系统上下文、追溯和验证门禁，而不是包一层同名命令。
+- **Kiro Specs**：团队使用 Kiro IDE/CLI/Web，或已有完整技术设计时适合采用。Design-First 可直接承接现有架构文档；Suite 应补充跨 spec 的 L0/L1/L2 上下文和系统级验收。
+- **OpenSpec**：也可用于 Greenfield，尤其适合希望长期维护 capability specs 的团队；但系统全貌、领域划分和全局契约仍需由 Greenfield Suite 补充。
+
+#### Brownfield
+
+- **OpenSpec**：优先候选。proposal、spec delta、design、tasks、apply 和 archive 与生产系统增量变化天然对应，living specs 也适合逐步补齐成熟系统知识。
+- **Kiro Specs**：Feature Spec 适合新增功能，Bug Spec 适合记录当前缺陷、期望行为和必须保持不变的行为。Suite 应额外补充 blast radius、迁移、灰度和回滚。
+- **GitHub Spec Kit**：可以用于成熟仓库，并可通过 extension、preset 和 workflow 加入 Brownfield 门禁；Suite 不应重新实现其阶段命令。
+
+团队已经采用某个工具时，默认沿用现有工具，除非存在明确且已批准的迁移理由。理论上的“最佳工具”通常不足以抵消迁移、培训和双工件漂移成本。
+
+### 5.6 不重复造轮子的硬规则
+
+- 工具已有 spec 时，不生成等价 `SPEC-*` 正文，只建立追溯映射。
+- 工具已有 plan/design 时，不再生成独立实施方案。
+- 工具已有 tasks 时，不维护第二份可写任务清单。
+- 工具已有执行命令时，由受约束实施 Skill 调用或编排该命令，不复制执行器。
+- 工具已有 gate、extension、preset、hook 或 verify 时，优先复用其输出。
+- Suite 只实现工具缺少且对目标场景必要的控制。
+- 同一工件只能有一个权威写入方；跨工具协作必须单向派生。
+
+### 5.7 官方能力依据
+
+- GitHub Spec Kit：支持核心 Spec → Plan → Tasks → Implement，以及 integrations、extensions、presets 和 workflows。官方文档：https://github.github.com/spec-kit/
+- OpenSpec：围绕 proposal、spec delta、design、tasks、apply、verify 和 archive 组织变化，并强调 Brownfield 与 living specs。官方文档：https://openspec.dev/
+- Kiro Specs：提供 requirements/bugfix、design、tasks、Feature/Bug/Quick Spec、Design-First 和逐任务执行。官方文档：https://kiro.dev/docs/specs/
+
+---
+
+## 6. 两套 Suite 的共享能力
 
 共享的是低层交付原语，不是高层编排逻辑。
 
-### 5.1 统一 ID 与追溯
+### 6.1 统一 ID 与追溯
 
 建议共享：
 
@@ -563,7 +677,7 @@ L2 垂直切片上下文包
 
 设计原因：统一 ID 和证据协议可以复用确定性检查器，也让项目从新建阶段进入生产维护阶段后不必更换整套追溯体系。
 
-### 5.2 统一证据标准
+### 6.2 统一证据标准
 
 所有完成声明至少包含：
 
@@ -577,7 +691,7 @@ L2 垂直切片上下文包
 
 设计原因：agent 的自然语言自述不可复核。统一证据标准能让实现、审计和 CI 使用相同完成定义。
 
-### 5.3 统一角色隔离
+### 6.3 统一角色隔离
 
 至少隔离：
 
@@ -589,7 +703,7 @@ L2 垂直切片上下文包
 
 设计原因：同一个 agent 同时解释需求、编码和验收时，错误理解可能在三类工件中保持一致，从而产生虚假的“全部通过”。
 
-### 5.4 可共享的确定性脚本
+### 6.4 可共享的确定性脚本
 
 建议逐步形成共享脚本：
 
@@ -604,7 +718,7 @@ L2 垂直切片上下文包
 
 ---
 
-## 6. 建议目录结构
+## 7. 建议目录结构
 
 ```text
 software-development/
@@ -627,6 +741,7 @@ software-development/
 │  └─ control-production-release/
 │
 └─ delivery-assurance-primitives/
+   ├─ integrate-spec-toolchain/
    ├─ validate-spec-artifacts/
    ├─ check-delivery-traceability/
    └─ verify-delivery-evidence/
@@ -636,17 +751,17 @@ software-development/
 
 ---
 
-## 7. 当前 Suite 的演进建议
+## 8. 当前 Suite 的演进建议
 
 当前 `design-to-verified-implementation` 更接近新系统整体实现的早期版本，其中已有能力可以这样演进：
 
 | 当前 Skill | 建议归属或演进方向 |
 |---|---|
-| `orchestrate-spec-delivery` | 演进为 Greenfield 总控；另建独立的生产变更总控 |
+| `orchestrate-spec-delivery` | 演进为 Greenfield 总控；接入 `integrate-spec-toolchain`；另建独立的生产变更总控 |
 | `index-design-docs` | 演进为 `establish-system-design-baseline`；生产流程另需“现状发现”能力 |
-| `write-verifiable-spec` | 抽取共享 Spec 原语；分别包装为系统切片 Spec 与 Delta Spec |
-| `implement-spec-task` | 保留共享受约束实施原则；为两类场景提供不同修改范围和验证门禁 |
-| `audit-spec-conformance` | 保留共享独立审计核心；分别增加系统集成审计和生产兼容/发布审计 |
+| `write-verifiable-spec` | 改为检查和增强工具原生 spec；仅在 fallback 模式使用内置模板 |
+| `implement-spec-task` | 编排工具原生 tasks/执行入口；保留共享受约束实施原则 |
+| `audit-spec-conformance` | 审计工具原生工件与证据；分别增加系统集成审计和生产兼容/发布审计 |
 
 不建议立即删除或大规模重写当前 Skills。更稳妥的顺序是：
 
@@ -658,7 +773,7 @@ software-development/
 
 ---
 
-## 8. 最终设计原则
+## 9. 最终设计原则
 
 两套 Suite 应共同遵守以下原则：
 

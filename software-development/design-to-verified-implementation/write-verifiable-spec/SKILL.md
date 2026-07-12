@@ -9,11 +9,13 @@ description: 把已解决冲突的需求基线转换成可独立审查和机械�
 
 只接受带稳定 ID、原文定位和当前来源 hash 的需求基线。存在未关闭的高影响问题时停止，并把问题退回 `$index-design-docs`；不得在 spec 中悄悄选择解释。
 
+先读取总控建立的 Spec 工具 profile。若仓库使用 Spec Kit、OpenSpec、Kiro Specs 或其他工具，直接增强其权威 spec、plan/design 和 tasks，并保留原生 ID、目录及状态；不得另建内容相同的 `SPEC-*` 副本。仅在未选择外部工具时使用本技能模板。
+
 ## 工作流
 
 1. 选择一个端到端垂直切片，列出关联 `REQ/NFR/INV/DEC` 和明确非目标。
 2. 读取每个来源引用的原文，而非只读规范化摘要。
-3. 使用 [spec-template.md](assets/spec-template.md) 编写 `SPEC-*`。
+3. 使用已选工具的原生格式编写或修订工件；只有内置回退模式才使用 [spec-template.md](assets/spec-template.md) 编写 `SPEC-*`。
 4. 将行为写成可观察的 Given/When/Then 或等价契约；覆盖正例、反例、边界、失败和非法状态。
 5. 冻结跨 agent 接口：schema、版本、错误模型、幂等、顺序、超时、重试、兼容和责任方。
 6. 对安全、数据完整性、并发、性能、恢复、可观测性、部署/迁移/回滚和兼容逐项标记“适用并量化”或“不适用及理由”。
