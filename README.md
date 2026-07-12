@@ -98,7 +98,7 @@ orchestrate-production-change
 | Skill | 何时使用 | 主要结果 |
 |---|---|---|
 | `govern-delivery-artifacts` | 初始化、验证、恢复或审计 `.delivery/`；执行状态、审批、权限、追溯、陈旧和证据门禁 | 统一 registry、状态记录、门禁结果和可复核证据 |
-| `integrate-spec-toolchain` | 接入已有 Spec Kit、OpenSpec、Kiro Specs、外部规格系统或 fallback | Spec 工具 profile、权威工件映射、能力缺口和信任边界 |
+| `integrate-spec-toolchain` | 接入已有 Spec Kit、OpenSpec、Kiro Specs、外部规格系统或 fallback；核对声明 CLI 的实际路径和版本 | Spec 工具 profile、运行时证据、权威工件映射、能力缺口、后续动作和信任边界 |
 
 ### Greenfield Skills
 
@@ -152,6 +152,8 @@ orchestrate-production-change
 ## 安全边界
 
 - Skills 默认不安装、初始化、升级或迁移外部 Spec 工具。
+- 仓库未采用 Spec 工具时进入 `fallback`，并明确列出继续内置格式或申请采用工具两种动作。
+- 仓库已经声明 provider 但 CLI 缺失或版本不匹配时结论为 `BLOCKED`，不得用 fallback 创建第二套 Spec；安装和初始化必须单独授权。
 - 分析和 dry-run 不修改目标业务代码，不连接或发布生产系统。
 - 实现者不得修改设计基线、Spec、审批、冻结契约或测试预言来迁就实现。
 - 验证者不得在验证过程中修复实现或改写 Spec。
