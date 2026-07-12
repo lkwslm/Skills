@@ -1,0 +1,4 @@
+interface:
+  display_name: "可验证规格编写"
+  short_description: "把已冻结需求基线转换成无歧义、可测试、可拆分实施的规格与任务"
+  default_prompt: "使用 $write-verifiable-spec 把需求基线写成可验证的规格和任务。"

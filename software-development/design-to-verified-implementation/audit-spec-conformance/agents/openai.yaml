@@ -1,0 +1,4 @@
+interface:
+  display_name: "规格一致性审计"
+  short_description: "由独立角色逐条核验设计、规格、代码、测试与验收证据是否一致"
+  default_prompt: "使用 $audit-spec-conformance 独立审计当前实现是否符合已批准规格。"
