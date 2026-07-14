@@ -11,7 +11,7 @@ description: 从已解决冲突的系统基线划分领域 ownership、依赖图
 
 ## 启动读取
 
-读取已批准且未陈旧的设计基线、术语、不变量、来源覆盖、artifact registry 和[上下文包 schema](../../delivery-assurance-primitives/govern-delivery-artifacts/assets/context-package.schema.json)。
+读取已批准且未陈旧的设计基线、术语、不变量、来源覆盖、artifact registry 和共享事件/工件唯一 schema 源 [`events.py`](../../delivery-assurance-primitives/govern-delivery-artifacts/scripts/delivery_core/events.py)。
 
 ## 前置门禁
 

@@ -1,4 +1,4 @@
 interface:
   display_name: "Govern Delivery Artifacts"
-  short_description: "Validate delivery state, traceability, and evidence"
-  default_prompt: "Use $govern-delivery-artifacts to initialize or audit .delivery governance artifacts."
+  short_description: "Operate a signed, transactional delivery ledger"
+  default_prompt: "Use $govern-delivery-artifacts to initialize, migrate, commit, recover, or validate a signed .delivery ledger."

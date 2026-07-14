@@ -27,7 +27,7 @@ description: 从代码、配置、测试、契约、schema 和脱敏运行证据
 
 ## 写入权限
 
-只写当前行为基线、代码地图、调用链、数据流、差异、假设和 registry 记录。
+只写当前行为基线、代码地图、调用链、数据流、差异和假设；registry 只准备 typed operations 并交给 `deliveryctl commit`。
 
 ## 输出与状态
 

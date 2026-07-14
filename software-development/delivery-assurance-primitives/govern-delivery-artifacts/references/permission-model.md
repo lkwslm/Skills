@@ -1,18 +1,9 @@
-# Permission model
+# Signed permission model
 
-Assign one role per attempt and enforce actual capabilities where possible:
+Authorization is derived from the currently replayed trust policy. Each actor is bound to one Ed25519 public-key fingerprint, capabilities, relative POSIX path scopes, environments, validity interval and optional revocation sequence. The event signature key must match that actor. Only the externally anchored root key may rotate policy.
 
-| Role | May write | Must not write |
-|---|---|---|
-| orchestrator | task packages, gates, owned state | business implementation, approvals, direct release |
-| fact-extractor | baseline and discovery artifacts | Spec, implementation, approvals |
-| spec-author | pre-approval authoritative Spec/tasks | implementation, self-approval |
-| contract-owner | owned contract versions | consumer implementations, compatibility exceptions |
-| implementer | approved code/test paths and evidence | baseline, Spec, approvals, production state |
-| verifier | attempts, raw results, audits | implementation, Spec, release approval |
-| release-controller | authorized environment and release state | code, Spec, expanded scope |
-| human-approver | versioned approval records | untraceable verbal approval |
+Never read role, allowed paths, approval status or environment authority from a proposed write manifest. Validate the actual operation paths and environment against signed policy. Trust changes and approvals are signed events; approval payloads bind subject ID/version/digest, run, attempt, scope, environment, decision, nonce and validity interval.
 
-Validate actor, artifact type, normalized relative path and parent/child ownership before writes. Reject absolute paths, drive-qualified paths and `..` traversal. Compare the real Git diff, including untracked files, with the approved base tree and scope.
+State writes additionally require an active claim for the exact object identity. A claim has an unpredictable lease token and monotonically increasing fencing token. Renew, release and expire must match both; a paused old holder cannot write after another fence is issued.
 
-For an environment write, resolve the authorization's approval ID through `.delivery/approvals.json`, then bind its object ID, version, content hash, path scope, environment, decision, and expiry to the corresponding artifact-registry record. Treat an authorization embedded only in the proposed write manifest as untrusted input. If runtime capability cannot enforce a critical boundary, record the degradation and stop at the gate that requires isolation.
+Store root private keys outside the repository. CI identities need separate scoped keys; do not share the root key. Rotate/revoke by a root-signed policy event and update the protected external trust-root history before accepting the new external checkpoint.

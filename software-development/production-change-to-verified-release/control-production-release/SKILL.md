@@ -15,7 +15,7 @@ description: 在明确人工授权和组织制度约束下检查或执行灰度�
 
 ## 前置门禁
 
-重新验证 commit/artifact/config hashes、审批范围、环境、变更窗口、迁移顺序、可逆点、监控可用性和实际 capability。执行任何环境写入前，使用共享权限门禁把授权记录绑定到 artifact registry 中的对象 ID/version/hash、环境、路径范围和有效期。无生产授权时只输出 handoff 并停在 `release_ready`。
+以外部 expected head 运行 `deliveryctl validate`，重新计算 commit/artifact/config digests，并核对审批范围、环境、变更窗口、迁移顺序、可逆点、监控可用性和实际 capability。执行任何环境写入前，解析 signed approval event，绑定 exact 对象 ID/version/digest、run/attempt、环境、路径范围和有效期。无生产授权时只输出 handoff 并停在 `release_ready`。
 
 ## 执行流程
 

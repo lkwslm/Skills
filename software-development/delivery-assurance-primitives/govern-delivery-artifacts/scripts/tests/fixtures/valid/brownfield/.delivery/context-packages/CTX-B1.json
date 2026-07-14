@@ -1,1 +1,0 @@
-{"package_id":"CTX-B1","level":"brownfield-task","version":"1","content_hash":"b0b0b0b0","sources":[{"artifact_id":"CR-1","version":"1","content_hash":"11111111"}],"dependencies":[],"read_scope":["src/existing"],"write_scope":["src/existing/target.py"],"created_at":"2026-01-01T00:15:00Z","canonicalization_version":"1"}

@@ -9,7 +9,7 @@
 - 目标根目录：本文所在的 `software-development/`；
 - 创建第 7 节列出的 16 个 Skill 目录及共享资源；
 - 保留现有 `design-to-verified-implementation/`，不得删除、重命名或覆盖其用户修改；
-- 新 Suite 使用 `.delivery/` 作为治理 sidecar 根目录；已有 `.specflow/` 只读兼容，迁移必须另行批准；
+- 新 Suite 使用 `deliveryctl` 管理的签名 `.delivery/` 账本；旧记录只能在另行批准后通过一次性迁移命令导入；
 - 完成第 12 节的全部静态验证和最小前向场景验证；
 - 不安装、初始化或升级外部 Spec 工具，不发布生产，不修改目标业务仓库；这些操作都需要单独授权。
 
@@ -37,7 +37,7 @@ Codex 按以下顺序执行：
 
 只有同时满足以下条件，Codex 才能报告 Suite 已创建：
 
-- 第 7 节全部必需文件存在且无 `TODO`、占位文本或断链引用；
+- 第 7 节全部必需文件存在且无未完成标记、占位文本或断链引用；
 - 16 个 Skill 均通过 `quick_validate.py`；
 - 共享 schema 能验证有效样例并拒绝无效样例；
 - 追溯、陈旧传播、权限和证据检查脚本通过自测；
@@ -123,7 +123,7 @@ L2 垂直切片上下文包
 
 ### 3.3 应包含的 Skills
 
-本 Suite 必须依赖共享的 `integrate-spec-toolchain`。启动时先探测并复用现有 Spec 工具；下列 Skills 是治理角色，不是对 Spec Kit、OpenSpec 或 Kiro Specs 已有命令的重新实现。若工具已经提供 spec、plan/design、tasks 和执行能力，相关 Skill 应检查、增强和编排原生工件，而不是创建平行副本。
+本 Suite 必须依赖共享的 `integrate-spec-toolchain`。启动时严格探测并复用原生 Spec Kit 或 OpenSpec；下列 Skills 是治理角色，不重新实现 provider 已有命令。相关 Skill 应检查、增强和编排原生工件，而不是创建平行副本。
 
 #### Skill A1：`orchestrate-system-realization`
 
@@ -380,7 +380,7 @@ Suite 名称：`production-change-to-verified-release`
 
 ### 4.3 应包含的 Skills
 
-本 Suite 同样必须依赖共享的 `integrate-spec-toolchain`。Brownfield 场景尤其要优先沿用仓库已有工具和 living specs。OpenSpec 的 change delta、Kiro 的 Feature/Bug Spec、Spec Kit 的现有项目工作流都可以成为权威工件；本 Suite 只补充现状证据、影响分析、兼容性、独立审计和生产发布门禁。
+本 Suite 同样必须依赖共享的 `integrate-spec-toolchain`。Brownfield 场景只沿用经严格探测的原生 OpenSpec change delta 或 Spec Kit 项目工作流；本 Suite 只补充现状证据、影响分析、兼容性、独立审计和生产发布门禁。
 
 #### Skill B1：`orchestrate-production-change`
 
@@ -604,17 +604,14 @@ Suite 名称：`production-change-to-verified-release`
 
 ### 5.1 定位
 
-两套 Suite 都不应重新实现成熟 Spec 工具已经提供的能力。Suite 的定位是：
+两套 Suite 都不重新实现 provider 已提供的规格能力。唯一受支持的 profile 是：
 
 ```text
-现有 Spec 工具
-负责 spec、plan/design、tasks、执行和原生生命周期
-            +
-Suite 治理层
-负责上下文分层、来源追溯、角色隔离、影响控制、独立验收和发布安全
+provider=openspec, mode=native
+provider=spec-kit, mode=native
 ```
 
-当仓库已经使用 Spec Kit、OpenSpec、Kiro Specs 或其他工具时，其原生 spec、plan/design 和 tasks 是这些工件类型的权威来源。Suite 的来源基线、上下文包、影响图、权限、审批、追溯和证据仍由第 9 节的 artifact registry 指定各自权威写入方。Suite 不得维护内容等价的第二份 spec 和 tasks。只有项目没有采用工具且用户明确不希望引入工具时，才使用内置 Markdown/CSV 回退格式。
+Provider 原生 spec、plan/design 和 tasks 是内容权威。Suite 通过第 9 节的签名账本管理跨工件身份、来源追溯、角色、claim、审批、状态、证据和审计，不维护内容等价的第二份工件。没有唯一且可执行的受支持 profile 时必须 `BLOCKED`。
 
 ### 5.2 共享 Skill：`integrate-spec-toolchain`
 
@@ -622,92 +619,76 @@ Suite 治理层
 
 - 探测仓库当前使用的 Spec 工具、版本、工件目录和定制配置；
 - 识别原生 spec、plan/design、tasks、执行和生命周期入口；
-- 生成统一 profile 和 ID 映射；
+- 生成严格 profile 和 typed identity 映射；
 - 比较工具已有能力与 Suite 所需门禁，形成缺失能力清单；
 - 让后续 Skills 读写原生工件；
-- 在未检测到仓库采用证据时给出 fallback 与选型建议；用户批准采用后生成 handoff，由获得单独授权的执行者安装或初始化；
-- 防止多个工具同时争夺同一工件的写权限。
+- 未检测到唯一受支持 provider 时返回 `BLOCKED`；
+- 防止两个 provider 同时争夺同一工件的写权限。
 
 **输入**
 
 - 仓库和项目指令；
 - 已有 spec 工件；
-- 可用 CLI、IDE 或 agent 集成；
-- 团队偏好和组织流程。
+- 配置声明的 CLI 入口和原生状态文件。
 
 **输出**
 
 - `spec-tool-profile`；
 - 按工件类型登记的权威位置和唯一写入方；
-- 原生 ID 到 Suite 追溯 ID 的映射规则；
+- 原生 ID 到账本 typed identity 的映射规则；
 - 可复用能力和缺失门禁；
 - 允许调用的原生命令；
 - CLI 的解析路径、实际版本、配置声明的安装来源和只读探测证据；
-- 明确的后续动作及其授权要求；
-- 工具冲突或迁移风险。
+- 明确的阻断原因和重探测条件；
+- provider 冲突或版本风险。
 
 **设计原因**
 
-没有适配层时，每个 Skill 都会自行猜测目录和命令，容易重复生成工件或绕过工具生命周期。集中探测和映射可以让两套 Suite 保持工具无关，同时真正复用现有生态。
+集中探测避免每个 Skill 自行猜测目录和命令，也让 profile 能作为 `provider_profile_observed` typed operation 被签名登记。
 
 ### 5.3 集成模式
 
 | 模式 | 使用条件 | 行为 |
 |---|---|---|
-| `native` | 仓库已有 Spec 工具；若声明可执行能力，其 CLI 路径与实际版本也可验证 | 原生 spec、plan/design 和 tasks 为相应类型的权威来源；Suite 维护治理 sidecar |
-| `adopt` | 仓库没有工具，用户批准引入 | 生成含 provider、版本、来源和授权范围的 handoff；由单独授权的执行者初始化，重探测通过后转为 `native` |
-| `bridge` | 组织已有外部规格系统或多个仓库 | 指定唯一权威端和单向同步方向，冲突必须人工处理 |
-| `fallback` | 仓库没有采用证据，且当前不调用外部 provider | 使用 Suite 内置 Markdown/CSV，列出继续 fallback 或申请 adopt 的后续动作，并保持未来可映射的 ID 和结构 |
-| `blocked` | 仓库声明了 provider，但配置、CLI、实际版本、权威根或唯一写入方无法确认 | 停止调用 provider；保留权威关系，不得用 fallback 创建平行工件 |
+| `native` | OpenSpec 或 Spec Kit 的仓库配置、权威根、CLI 路径、实际版本和原生命令均验证成功 | 原生工件为内容权威；Suite 只登记摘要、typed refs 和治理事件 |
+| `blocked` | 未检测到 provider、检测结果冲突，或任一必需证据不可验证 | 停止后续阶段，不创建任何替代规格或任务工件 |
 
-不得根据机器上存在某个 CLI 就自动进入 `native`；必须先在仓库中找到项目工件或明确配置。仓库声明可执行能力时，还必须从配置读取 executable、只读版本参数和配置声明的安装来源；所有命令入口必须使用同一 executable。探测器解析实际路径，并通过受限版本探测确认实际版本与仓库配置一致。CLI 缺失属于环境不可用，profile 模式为 `blocked`、门禁结论为 `BLOCKED`、脚本退出码为 `3`；版本不匹配或命令入口与 executable 不一致属于兼容门禁失败，profile 模式为 `blocked`、门禁结论为 `BLOCKED`、脚本退出码为 `1`。这些情况均不得自动降级为 fallback。
-
-版本探测只能以 `shell=False` 执行配置声明的 `--version`、`version` 或 `-V`，设置固定超时且不得拼接 shell 文本。其他 CLI 调用、安装、初始化、升级和迁移都需要单独授权。`integrate-spec-toolchain` 只产生 adopt handoff 和重探测条件，不直接执行这些变更。
+不得根据机器上存在 CLI 就进入 `native`。探测器必须从仓库配置和原生状态文件确认采用关系，解析同一个 executable，并通过 `shell=False`、固定超时的只读命令核对版本和能力。缺少 CLI 返回环境阻塞；配置、版本、路径或命令不一致返回门禁失败。安装、初始化、升级和迁移均不属于探测器职责。
 
 ### 5.4 工件映射
 
-| Suite 抽象能力 | GitHub Spec Kit | OpenSpec | Kiro Specs |
-|---|---|---|---|
-| 治理原则 | constitution、preset | schema/profile 与项目约定 | steering/project rules |
-| 需求或变化 | spec | capability spec、proposal、spec delta | requirements.md 或 bugfix.md |
-| 技术方案 | plan | design.md | design.md |
-| 任务 | tasks | tasks.md | tasks.md |
-| 实施 | implement | apply | 单任务执行或 `/spec run` |
-| 生命周期 | workflow、extension、gate | verify、archive | Spec 状态和 PR 工作流 |
+| Suite 抽象能力 | Spec Kit | OpenSpec |
+|---|---|---|
+| 治理原则 | constitution、preset | schema/profile 与项目约定 |
+| 需求或变化 | spec | capability spec、proposal、spec delta |
+| 技术方案 | plan | design |
+| 任务 | tasks | tasks |
+| 实施 | implement workflow | apply workflow |
+| 生命周期 | state、inputs、log、workflow status | config、change config、status、instructions |
 
-映射只保存位置、ID 和状态，不复制正文。实际命令和路径必须从仓库配置及已安装版本探测，不能依赖模型记忆；官方文档只能用于提出候选配置，不能替代本机 CLI 和实际版本证据。
+映射只通过 typed identities 和摘要关联原生工件，不复制正文。实际命令和路径必须来自严格探测，不能依赖模型记忆。
 
-### 5.5 工具选择建议
+### 5.5 Provider 选择
 
-#### Greenfield
+- 仓库唯一采用 OpenSpec 时使用 OpenSpec 原生 profile。
+- 仓库唯一采用 Spec Kit 时使用 Spec Kit 原生 profile。
+- 同时检测到两者、两者都未检测到或能力不完整时返回 `BLOCKED`，由负责人先解决仓库配置。
+- Suite 不安装或初始化 provider。
 
-- **GitHub Spec Kit**：优先候选。它已经提供 Spec → Plan → Tasks → Implement，以及 workflow、人工 gate、extension 和 preset。Suite 应优先通过 preset/extension/workflow 注入系统上下文、追溯和验证门禁，而不是包一层同名命令。
-- **Kiro Specs**：团队使用 Kiro IDE/CLI/Web，或已有完整技术设计时适合采用。Design-First 可直接承接现有架构文档；Suite 应补充跨 spec 的 L0/L1/L2 上下文和系统级验收。
-- **OpenSpec**：也可用于 Greenfield，尤其适合希望长期维护 capability specs 的团队；但系统全貌、领域划分和全局契约仍需由 Greenfield Suite 补充。
-
-#### Brownfield
-
-- **OpenSpec**：优先候选。proposal、spec delta、design、tasks、apply 和 archive 与生产系统增量变化天然对应，living specs 也适合逐步补齐成熟系统知识。
-- **Kiro Specs**：Feature Spec 适合新增功能，Bug Spec 适合记录当前缺陷、期望行为和必须保持不变的行为。Suite 应额外补充 blast radius、迁移、灰度和回滚。
-- **GitHub Spec Kit**：可以用于成熟仓库，并可通过 extension、preset 和 workflow 加入 Brownfield 门禁；Suite 不应重新实现其阶段命令。
-
-团队已经采用某个工具时，默认沿用现有工具，除非存在明确且已批准的迁移理由。理论上的“最佳工具”通常不足以抵消迁移、培训和双工件漂移成本。
-
-### 5.6 不重复造轮子的硬规则
+### 5.6 不重复工件的硬规则
 
 - 工具已有 spec 时，不生成等价 `SPEC-*` 正文，只建立追溯映射。
 - 工具已有 plan/design 时，不再生成独立实施方案。
 - 工具已有 tasks 时，不维护第二份可写任务清单。
 - 工具已有执行命令时，由受约束实施 Skill 调用或编排该命令，不复制执行器。
-- 工具已有 gate、extension、preset、hook 或 verify 时，先核验版本、来源、权限边界和输出可信度，再优先复用其输出。
+- Provider 已有 gate、hook 或 verify 时，先核验版本、来源、权限边界和输出可信度，再复用其输出。
 - Suite 只实现工具缺少且对目标场景必要的控制。
-- 同一工件只能有一个权威写入方；跨工具协作必须单向派生。
+- 同一工件只能有一个权威写入方；治理关系只作为 signed typed operations 追加。
 
 ### 5.7 官方能力依据
 
-- GitHub Spec Kit：支持核心 Spec → Plan → Tasks → Implement，以及 integrations、extensions、presets 和 workflows。官方文档：https://github.github.com/spec-kit/
+- Spec Kit：支持核心 Spec → Plan → Tasks → Implement 及原生 workflow。官方文档：https://github.github.com/spec-kit/
 - OpenSpec：围绕 proposal、spec delta、design、tasks、apply、verify 和 archive 组织变化，并强调 Brownfield 与 living specs。官方文档：https://openspec.dev/
-- Kiro Specs：提供 requirements/bugfix、design、tasks、Feature/Bug/Quick Spec、Design-First 和逐任务执行。官方文档：https://kiro.dev/docs/specs/
 
 ---
 
@@ -730,27 +711,28 @@ v1 必须共享：
 - `CR-*`：变更请求；
 - `DISC-*`：现状差异。
 
-基本追溯链保持一致：
+基本追溯链使用固定 relation matrix：
 
 ```text
-来源 → 需求/变更 → Spec → Task → 实现 → Test → 证据
+source -derives→ requirement -specifies→ spec -derives→ task
+task -implements→ implementation -derives→ test -verifies→ evidence -audits→ audit
 ```
 
-设计原因：统一 ID 和证据协议可以复用确定性检查器，也让项目从新建阶段进入生产维护阶段后不必更换整套追溯体系。
+每个节点使用完整 typed identity；每条边只能使用 reducer schema 允许的端点类型。设计原因：固定 relation matrix 让完成门禁检查语义闭包，而不是检查字段是否非空。
 
 ### 6.2 统一证据标准
 
 所有完成声明至少包含：
 
-- 执行命令；
-- 退出码；
+- subject typed identity、run ID 和 attempt ID；
+- 完整 target commit、scope 和 environment；
+- 执行命令与退出码；
 - 测试通过、失败和跳过数量；
-- 产物路径；
-- 对应需求和测试 ID；
-- 环境与版本；
+- 原始日志 delivery blob digest；
+- 对应 spec、task 和 test typed identities；
 - 未验证项及原因。
 
-设计原因：agent 的自然语言自述不可复核。统一证据标准能让实现、审计和 CI 使用相同完成定义。
+Evidence 与 audit record 必须由独立签名事件绑定，并由 typed gate refs 精确引用。设计原因：agent 的自然语言自述不可复核。
 
 ### 6.3 统一角色隔离
 
@@ -764,18 +746,18 @@ v1 必须共享：
 
 设计原因：同一个 agent 同时解释需求、编码和验收时，错误理解可能在三类工件中保持一致，从而产生虚假的“全部通过”。
 
-### 6.4 可共享的确定性脚本
+### 6.4 可共享的确定性执行层
 
-v1 必须创建以下共享脚本能力：
+v1 必须由 `deliveryctl` 和严格 provider detector 提供：
 
-- Spec 结构校验；
-- 追溯矩阵完整性检查；
-- 来源或 Spec hash 陈旧检测；
-- 未授权 diff 检查；
-- 接口 schema 和契约检查；
-- 证据文件完整性检查。
+- 外部 trust root、签名链和 expected head 验证；
+- typed operation schema、capability、path scope 和 environment 校验；
+- claim lease、fencing token 和状态 gate 校验；
+- artifact authority、supersession、陈旧传播和 trace closure 校验；
+- content-addressed evidence/audit 与原始 blob 校验；
+- OpenSpec/Spec Kit 原生采用关系和命令能力校验。
 
-设计原因：格式、引用和状态检查应由确定性程序完成，把 agent 判断保留给真正需要语义推理的部分。
+设计原因：信任、引用、状态和证据完整性必须由确定性程序执行；agent 只负责需要语义判断的工作。
 
 ---
 
@@ -840,24 +822,27 @@ software-development/
    │  │  ├─ state-machines.md
    │  │  ├─ permission-model.md
    │  │  └─ evidence-protocol.md
-   │  ├─ assets/
-   │  │  ├─ artifact-registry.schema.json
-   │  │  ├─ delivery-state.schema.json
-   │  │  ├─ traceability.schema.json
-   │  │  ├─ evidence.schema.json
-   │  │  ├─ approval.schema.json
-   │  │  └─ context-package.schema.json
    │  └─ scripts/
-   │     ├─ validate_delivery_artifacts.py
-   │     ├─ check_delivery_traceability.py
-   │     ├─ check_delivery_staleness.py
-   │     ├─ check_delivery_permissions.py
-   │     ├─ verify_delivery_evidence.py
+   │     ├─ deliveryctl.py
+   │     ├─ requirements.txt
+   │     ├─ delivery_core/
+   │     │  ├─ __init__.py
+   │     │  ├─ authority.py
+   │     │  ├─ canonical.py
+   │     │  ├─ crypto.py
+   │     │  ├─ events.py
+   │     │  ├─ schema.py
+   │     │  ├─ ledger.py
+   │     │  ├─ reducer.py
+   │     │  ├─ gates.py
+   │     │  ├─ permissions.py
+   │     │  ├─ service.py
+   │     │  ├─ traceability.py
+   │     │  └─ transaction.py
    │     └─ tests/
-   │        ├─ test_delivery_scripts.py
-   │        └─ fixtures/
-   │           ├─ valid/
-   │           └─ invalid/
+   │        ├─ test_delivery_core_storage.py
+   │        ├─ test_delivery_domain.py
+   │        └─ test_delivery_ledger.py
    └─ integrate-spec-toolchain/
       ├─ SKILL.md
       ├─ agents/openai.yaml
@@ -867,9 +852,15 @@ software-development/
       │  └─ trust-policy.md
       ├─ assets/
       │  └─ spec-tool-profile.schema.json
-      └─ scripts/
-         ├─ detect_spec_tool.py
-         └─ tests/test_detect_spec_tool.py
+       └─ scripts/
+          ├─ detect_spec_tool.py
+          ├─ requirements.txt
+          ├─ spec_providers/
+          │  ├─ __init__.py
+          │  ├─ base.py
+          │  ├─ openspec.py
+          │  └─ speckit.py
+          └─ tests/test_detect_spec_tool.py
 ```
 
 ### 7.1 资源归属规则
@@ -909,12 +900,12 @@ Codex 必须按以下阶段创建，前一阶段验证通过后才能进入下�
 
 ### 阶段 2：创建 Greenfield Suite
 
-按 A1 → A2 → A3 → A4 → A5 → A6 → A7 创建。复用现有 Suite 的成熟原则时重新表达为第 11 节合同，不直接复制互相引用的旧 Skill 名称或 `.specflow/` 路径。
+按 A1 → A2 → A3 → A4 → A5 → A6 → A7 创建。复用现有 Suite 的成熟原则时重新表达为第 11 节合同，不复制旧 Skill 名称或旧存储路径。
 
 | 新 Skill | 可复用来源 | 必须新增的差异 |
 |---|---|---|
 | `orchestrate-system-realization` | 现有总控的门禁和失败回路 | 分层状态、上下文扩展、契约 epoch、系统完成状态 |
-| `establish-system-design-baseline` | `index-design-docs` | artifact registry、声明类型、来源置信度 |
+| `establish-system-design-baseline` | `index-design-docs` | 签名 artifact operations、声明类型、来源置信度 |
 | `partition-system-contexts` | 长文档分层原则 | L0/L1 manifest、依赖闭包、扩展请求 |
 | `freeze-system-contracts` | `write-verifiable-spec` 的契约检查 | 独立 owner、版本、兼容窗口、Contract Change |
 | `write-system-slice-spec` | 可验证 Spec 和垂直切片 | 原生 Spec 映射、L2 package、系统旅程覆盖 |
@@ -935,7 +926,7 @@ Codex 必须按以下阶段创建，前一阶段验证通过后才能进入下�
 
 1. Greenfield：两领域、一个共享契约、一个垂直切片；
 2. Brownfield：一个现有行为、一个目标变化、一个保持不变条款、一个模拟迁移和灰度计划；
-3. 负向测试：陈旧 hash、缺失审批、越权写入、证据缺字段、两个工具争夺同一工件。
+3. 负向测试：陈旧 expected head、外部 trust root 不匹配、签名或 capability 无效、claim fencing 陈旧、typed ref 不闭合、证据缺字段、两个 provider 冲突。
 
 dry-run 只验证工件、门禁和 handoff，不要求实现真实业务系统，也不得连接生产系统。
 
@@ -952,64 +943,45 @@ dry-run 只验证工件、门禁和 handoff，不要求实现真实业务系统�
 
 ## 9. 共享工件协议
 
-### 9.1 治理目录
+### 9.1 签名账本与信任根
 
-Suite 在目标业务仓库使用以下 sidecar。它不复制外部 Spec 工具正文：
-
-```text
-.delivery/
-├─ delivery.json
-├─ artifact-registry.json
-├─ state.json
-├─ traceability.json
-├─ approvals.json
-├─ context-packages/
-├─ evidence/
-├─ audits/
-└─ runs/
-```
-
-- `delivery.json`：Suite 类型、run ID、目标、风险等级、当前 commit 和工具 profile 引用；
-- `artifact-registry.json`：所有权威与派生工件、owner、hash、版本和新鲜度；
-- `state.json`：第 9.3 节的层级状态；
-- `traceability.json`：来源到证据的有向关系，不复制正文；
-- `approvals.json`：批准对象、版本/hash、批准人、权限、时间和范围；
-- `context-packages/`：L0/L1/L2 或 Brownfield 任务上下文 manifest；
-- `evidence/`：原始运行结果的索引和 hash；
-- `audits/`：条款级独立审计；
-- `runs/`：每次执行的 attempt、命令和状态转换日志。
-
-### 9.2 Artifact registry 最小字段
-
-每个工件记录必须通过 `artifact-registry.schema.json`，至少包含：
+`.delivery/` 是 `deliveryctl` 管理的 append-only 账本存储。事件、HEAD、generation、索引和派生视图都不是人工写入接口。所有读取先执行：
 
 ```text
-artifact_id
-artifact_type
-authority_uri
-authority_kind
-owner_role
-writer
-version
-content_hash
-derived_from[]
-status
-created_at
-validated_at
+deliveryctl validate --root <repo> --trust-root <external-trust-root> --expected-head <caller-confirmed-head> --repository-map <map>
 ```
 
-可选但按场景要求的字段：`effective_at`、`expires_at`、`confidence`、`environment`、`supersedes`、`consumers`。
+Trust root 和私钥必须位于仓库之外。仓库内自声明的 key、policy 或当前 HEAD 不能建立信任；调用方必须提供独立确认的 expected head。
 
-规则：
+### 9.2 Typed operations、身份与引用
 
-- 一个 `artifact_id + version` 只有一个权威写入方；
-- 派生工件必须记录 `derived_from` 的 ID、版本和 hash；
-- 内容变化创建新版本，不覆盖已批准版本的历史身份；
-- 原生 Spec 工具正文只记录 URI、ID、version/hash 和状态；
-- 无法计算内容 hash 的外部工件必须记录稳定版本标识和获取时间；
-- `confidence` 只能描述发现性证据，不能替代审批。
+每个写入 batch 是 operation 数组。每个 operation 都包含 `schema_version`、唯一 `operation_id`、受支持的 `type` 和符合 schema 的 `payload`。受支持类型包括：
 
-### 9.3 层级状态机
+- trust policy 初始化与轮换；
+- artifact 注册与 supersession；
+- approval；
+- run、attempt、evidence 和 audit；
+- claim 获取、续期、到期与释放；
+- state object 注册与 transition；
+- trace node 与 trace edge；
+- provider profile observation；
+- 一次性 legacy import。
+
+工件身份必须为 `{artifact_id, version, digest}`；digest 必须包含 algorithm、canonicalization 和 value。状态门禁引用必须为 `{ref_type, event_id, record_id, record_version, digest}`。不得使用可变路径、裸 ID 或未绑定摘要的字符串代替 typed refs。
+
+### 9.3 唯一写入协议
+
+所有变更必须执行同一协议：
+
+1. 用外部 trust root 和调用方给定的 expected head 验证；
+2. 生成完整 operation batch 和所需 content-addressed blobs；
+3. 调用 `deliveryctl commit --expected-revision <expected-head>`，由具备相应 capability 的身份签名；
+4. 保存返回的新 revision；
+5. 用该 revision 立即再次执行 `validate`。
+
+签名、权限、schema、claim、fencing token、typed ref 或 revision 任一检查失败，整个 batch 必须失败。不得局部补写、读取当前 HEAD 覆盖调用方预期或自动重试。
+
+### 9.4 层级状态机
 
 Greenfield Delivery 状态：
 
@@ -1045,47 +1017,49 @@ draft → reviewed → frozen → superseded | retired
 
 仅审批对象允许 `RISK_ACCEPTED` 作为问题处置结果；它不是跳过状态机的通行状态。
 
-每次转换必须记录：旧状态、新状态、对象 ID、actor、时间、输入版本、证据引用和 gate 结果。脚本必须拒绝未定义转换。
+每次转换都由 `state_transitioned` operation 表达，并携带 typed gate refs。状态是签名事件重放结果，脚本必须拒绝未定义转换、陈旧引用和不满足门禁的事件。
 
-### 9.4 陈旧传播
+### 9.5 陈旧传播与追溯
 
 当权威工件版本/hash 改变时：
 
-1. 从 `derived_from` 和追溯图计算下游闭包；
-2. 将尚未重新验证的下游标为 `stale`；
+1. 从 artifact supersession 和 typed trace edges 计算下游闭包；
+2. 追加状态事件将尚未重新验证的下游标为 `stale`；
 3. 保留旧证据，不删除历史；
 4. 计算最小重新验证范围；
 5. 只有新版本证据全部通过后才能清除 `stale`。
 
-仅时间戳变化不得触发传播；语义无关的格式变化可由确定性 canonical hash 过滤，但必须记录 canonicalization 版本。
-
-### 9.5 追溯关系
-
-`traceability.json` 使用节点和边表达：
+仅时间戳变化不得触发传播；语义无关的格式变化可由确定性 canonical digest 过滤，但必须记录 canonicalization 版本。追溯关系由 `trace_node_recorded` 和 `trace_edge_recorded` operations 表达：
 
 ```text
 来源 → REQ/NFR/INV/CR/DISC → Spec/Contract → Task
 → implementation ref → TEST → evidence → audit
 ```
 
-每条边包含关系类型、来源版本和创建者。完成门禁检查的是必需关系闭包，不是字段是否非空。允许的豁免必须引用批准记录。
+每条边包含 typed endpoints、关系类型、创建事件和摘要。完成门禁检查必需关系闭包；允许的豁免必须引用签名 approval record。
 
-### 9.6 证据最小字段
+### 9.6 Claims、运行、证据与审计
 
-除第 6.2 节外，证据必须包含：
+实施者必须先通过 `claim_acquired` 获得带 lease 和 fencing token 的独占 claim。每次执行使用 `run_started`、`attempt_started` 和 `attempt_completed`；原始输出存为 content-addressed blob，再由 `evidence_recorded` 引用。独立验证使用新的 attempt 和 `audit_recorded`，不得复用实现者结论。
+
+证据至少绑定：
 
 - commit/tree hash；
 - 相关工件 hash；
 - runner、操作系统、工具版本或环境镜像 digest；
 - 开始和结束时间；
-- 原始日志路径及 hash；
+- 原始日志 blob digest；
 - 测试选择器、通过/失败/跳过数量；
 - 跳过原因和批准记录；
 - attempt ID；
 - 未验证项；
 - 证据有效期或失效条件。
 
-agent 摘要不能替代原始结果。缺少强制字段时，`verify_delivery_evidence.py` 必须返回非零退出码。
+agent 摘要不能替代原始结果。只有引用完整 audit/evidence typed refs 的 PASS 才能进入接受状态。
+
+### 9.7 一次性迁移
+
+旧记录不参与正常读写。只有总控在明确授权下，提供外部 trust root、签名身份、唯一 migration ID 和 migration operation ID 后，才能执行一次 `deliveryctl migrate-specflow` 或 `deliveryctl migrate-delivery`。迁移成功后必须验证返回 revision；重复迁移、来源不完整或目标状态冲突都必须失败。
 
 ---
 
@@ -1104,14 +1078,14 @@ agent 摘要不能替代原始结果。缺少强制字段时，`verify_delivery_
 | 发布控制者 | 读已签名产物，按授权执行发布步骤 | 改代码/Spec、扩大环境或发布范围 |
 | 人工批准者 | 批准明确对象、版本和范围 | 用口头同意替代可追溯记录 |
 
-Skill 中写“不得”不是技术权限保证。总控必须探测实际能力；若运行环境不能限制关键写权限，应记录降级并在需要强隔离的门禁停止。
+Skill 中写“不得”不是技术权限保证。总控必须用外部 trust root 验证签名身份及 capability；运行环境不能限制关键写权限时必须 fail closed。
 
 ### 10.2 外部工具信任
 
 - 记录 provider、配置版本、实际版本、解析后的 CLI 路径、配置声明的安装来源和启用的扩展/workflow；
 - 社区扩展和可执行 workflow 默认视为未受信任代码；
 - 只允许探测器以 `shell=False` 执行受限的只读版本命令；执行其他 CLI、shell、安装、初始化、升级、迁移、网络写入和凭证访问前要求明确授权；
-- 缺少 CLI 时输出环境阻塞和待授权动作，不自动安装，也不切换为 fallback；
+- 缺少 CLI 时输出环境阻塞和待授权动作，不自动安装或创建替代工件；
 - 优先使用只读探测和机器可读输出；
 - 不把人工 gate 视为 capability sandbox；
 - 对工具输出做 schema 和路径校验，防止写出授权根目录；
@@ -1179,12 +1153,13 @@ orchestrate-production-change                 # 顶层 owner
 
 - 首先调用或遵循 `govern-delivery-artifacts`；
 - 探测并调用 `integrate-spec-toolchain`；
+- 要求调用方提供外部 trust root 和独立确认的 expected head；
 - 声明自己拥有的状态层级和不可写工件；
 - 按任务依赖选择下一角色，而不是一次把全部工作交给单一 agent；
 - 在角色隔离不可满足时 fail closed；
 - 只根据机器门禁、审计和批准记录改变状态；
-- 支持从 `.delivery/state.json` 恢复，不依赖聊天历史；
-- 每次恢复先运行陈旧检查。
+- 通过 `deliveryctl validate --expected-head` 重放签名账本恢复，不依赖聊天历史或可编辑状态文件；
+- 每次恢复先验证 expected head、签名链、typed refs 和陈旧闭包。
 
 ### 11.3 实施 Skill 的额外要求
 
@@ -1234,8 +1209,8 @@ orchestrate-production-change                 # 顶层 owner
 | `implement-bounded-production-change` | 在已批准 Delta Spec 和修改范围内建立回归与目标失败测试，实施最小、兼容且可恢复的代码、配置或迁移变更。用于执行一个 Brownfield 任务或修复其验证偏差时。 |
 | `verify-production-change` | 独立验证生产变更的新增、修改和保持不变条款，检查回归、兼容、迁移、权限、观测和实际 diff 范围。用于决定变更是否达到 implementation_accepted 和 release_ready 时。 |
 | `control-production-release` | 在明确人工授权和组织制度约束下检查或执行灰度发布、监控、停止、回滚、恢复和发布后验证；无权限时只生成 handoff。用于已验证 Brownfield 变更的发布准备和受控发布时。 |
-| `govern-delivery-artifacts` | 管理两套交付 Suite 的 artifact registry、层级状态、追溯、审批、权限、陈旧传播和证据协议，并运行确定性门禁。用于初始化、验证、恢复或审计 `.delivery/` 治理工件时。 |
-| `integrate-spec-toolchain` | 探测仓库采用的 Spec 工具、版本、权威工件、能力和信任边界，并映射到 Suite 门禁而不复制原生正文。用于接入 Spec Kit、OpenSpec、Kiro Specs、外部规格系统或 fallback 模式时。 |
+| `govern-delivery-artifacts` | 通过 `deliveryctl` 管理两套 Suite 的签名账本、typed operations/refs、层级状态、追溯、审批、claim、权限和证据门禁。用于初始化、提交、验证、恢复、迁移或审计 `.delivery/` 时。 |
+| `integrate-spec-toolchain` | 严格探测仓库原生 Spec Kit 或 OpenSpec 的版本、权威工件、命令能力和信任边界，并登记可验证 profile。用于接入受支持 provider 或诊断 provider 门禁失败时。 |
 
 ---
 
@@ -1246,12 +1221,13 @@ orchestrate-production-change                 # 顶层 owner
 Codex 必须运行：
 
 1. 对 16 个 Skill 分别执行 `skill-creator/scripts/quick_validate.py <skill-dir>`；
-2. 搜索 `TODO|TBD|PLACEHOLDER|待补充`，结果必须为空；
-3. 检查所有 Markdown 相对链接存在；
-4. 检查所有文件夹名与 frontmatter `name` 一致；
-5. 检查 `agents/openai.yaml` 与对应 `SKILL.md` 的用途一致；
-6. 运行共享脚本单元测试；
-7. 验证 JSON Schema 本身可加载。
+2. 搜索常见未完成标记和占位文本，结果必须为空；
+3. 在正常流程文档中搜索旧路径、旧 provider 和非原生模式术语，结果必须为空；
+4. 检查所有 Markdown 相对链接存在；
+5. 检查所有文件夹名与 frontmatter `name` 一致；
+6. 检查 `agents/openai.yaml` 与对应 `SKILL.md` 的用途一致；
+7. 运行共享脚本单元测试；
+8. 验证 operation 与 provider profile schema 本身可加载。
 
 实际命令根据本机 Python 和 `skill-creator` 路径探测，不在 Skill 内硬编码用户主目录。
 

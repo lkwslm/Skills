@@ -1,11 +1,8 @@
 # Capability matrix
 
-| Abstract artifact | Spec Kit | OpenSpec | Kiro Specs |
-|---|---|---|---|
-| requirements/change | spec | capability/proposal/spec delta | requirements or bugfix |
-| technical design | plan | design | design |
-| tasks | tasks | tasks | tasks |
-| implementation | implement | apply | task run |
-| lifecycle | workflow/extension/gate | verify/archive | spec and PR workflow |
+| Provider | Verified native state | Delivery mapping |
+|---|---|---|
+| OpenSpec | config schema, change metadata, artifact graph/status/dependencies, apply instructions | change and artifact native IDs, authority paths, status, content observations |
+| Spec Kit | integration metadata, persisted run state/inputs/JSONL log, CLI status | workflow/run IDs, state authority, input/log observations, exact resume state |
 
-Map authority URI, native ID, version/hash and status only. Reuse provider capabilities for their native lifecycle. Add only missing controls: source traceability, L0/L1/L2 context, independent verification, blast radius, compatibility, migration, release safety, and evidence governance.
+Provider capabilities do not supply delivery trust, signed approval, claim fencing, source-to-audit closure, independent audit, release control or external rollback checkpoint. Add those only through the signed delivery ledger.
