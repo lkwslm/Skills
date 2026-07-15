@@ -15,4 +15,4 @@
 
 ## 4. Release
 
-- [ ] 4.1 Run all Skill, detector, ledger, self-host, compile, YAML, and diff checks; record signed evidence/audit and publish the branch to GitHub.
+- [x] 4.1 Run all Skill, detector, ledger, self-host, compile, YAML, and diff checks; record signed evidence/audit and publish the branch to GitHub.
