@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import subprocess
@@ -36,16 +37,23 @@ from test_detect_spec_tool import (  # noqa: E402
 )
 
 
-GIT = Path(shutil.which("git") or "").resolve(strict=True)
-if GIT.parent.name.lower() == "cmd":
-    GIT = (GIT.parent.parent / "mingw64" / "bin" / "git.exe").resolve(strict=True)
+GIT_SOURCE = Path(shutil.which("git") or "").resolve(strict=True)
 _GIT_RUNTIME_TEMP = tempfile.TemporaryDirectory()
-GIT_SOURCE = GIT
 GIT_ROOT = Path(_GIT_RUNTIME_TEMP.name)
-shutil.copy2(GIT_SOURCE, GIT_ROOT / GIT_SOURCE.name)
-for dependency in GIT_SOURCE.parent.glob("*.dll"):
-    shutil.copy2(dependency, GIT_ROOT / dependency.name)
-GIT = GIT_ROOT / GIT_SOURCE.name
+if os.name == "nt" and GIT_SOURCE.parent.name.lower() == "cmd":
+    source_root = GIT_SOURCE.parent.parent
+    (GIT_ROOT / "cmd").mkdir()
+    (GIT_ROOT / "mingw64" / "bin").mkdir(parents=True)
+    shutil.copy2(GIT_SOURCE, GIT_ROOT / "cmd" / GIT_SOURCE.name)
+    shutil.copy2(source_root / "mingw64" / "bin" / "git.exe", GIT_ROOT / "mingw64" / "bin" / "git.exe")
+    for dependency in (source_root / "mingw64" / "bin").glob("*.dll"):
+        shutil.copy2(dependency, GIT_ROOT / "mingw64" / "bin" / dependency.name)
+    GIT = GIT_ROOT / "cmd" / GIT_SOURCE.name
+else:
+    shutil.copy2(GIT_SOURCE, GIT_ROOT / GIT_SOURCE.name)
+    for dependency in GIT_SOURCE.parent.glob("*.dll"):
+        shutil.copy2(dependency, GIT_ROOT / dependency.name)
+    GIT = GIT_ROOT / GIT_SOURCE.name
 GIT_SHA256 = hashlib.sha256(GIT.read_bytes()).hexdigest()
 _GIT_MANIFEST_TEMP = tempfile.TemporaryDirectory()
 GIT_MANIFEST = Path(_GIT_MANIFEST_TEMP.name) / "git-runtime.json"
@@ -100,6 +108,15 @@ class DeliveryLedgerTest(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.temp.cleanup()
+
+    def test_pinned_git_runtime_is_self_contained(self) -> None:
+        environment = os.environ.copy()
+        environment["PATH"] = ""
+        result = subprocess.run(
+            [str(GIT), "--version"], text=True, capture_output=True, check=False, env=environment,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertRegex(result.stdout, r"^git version \d+")
 
     def at(self, minutes: int) -> str:
         return (self.clock + timedelta(minutes=minutes)).isoformat(timespec="seconds").replace("+00:00", "Z")
