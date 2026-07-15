@@ -127,7 +127,7 @@ class OpenSpecProvider(ProviderAdapter):
             instructions = self.run_json(("instructions", "apply", "--change", change_id, "--json"))
             if instructions.get("changeName") != change_id or instructions.get("schemaName") != change_schema:
                 raise ProviderError("PROVIDER_CLI_OUTPUT_INVALID", f"OpenSpec instructions identity mismatch for {change_id}")
-            if instructions.get("state") not in {"ready", "blocked", "complete"}:
+            if instructions.get("state") not in {"ready", "blocked", "all_done"}:
                 raise ProviderError("PROVIDER_CLI_OUTPUT_INVALID", f"OpenSpec instructions state is invalid for {change_id}")
             if not isinstance(instructions.get("instruction"), str) or not instructions["instruction"]:
                 raise ProviderError("PROVIDER_CLI_OUTPUT_INVALID", f"OpenSpec instructions are incomplete for {change_id}")

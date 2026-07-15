@@ -171,6 +171,10 @@ class DetectSpecToolTest(unittest.TestCase):
             self.assertEqual(validate_schema(first_profile, PROFILE_SCHEMA), [])
 
             tasks.write_text("## 1. Delivery\n\n- [x] 1.1 Add status command\n- [x] 1.2 Add recovery test\n", encoding="utf-8")
+            instructions_path = repo / "cli" / "instructions.json"
+            instructions = json.loads(instructions_path.read_text(encoding="utf-8"))
+            instructions["state"] = "all_done"
+            instructions_path.write_text(json.dumps(instructions), encoding="utf-8")
             second = run_repo(repo, environment)
             self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
             changed = json.loads(second.stdout)["profile"]["id_mapping"]["openspec:change:add-login:task:1.1"]
