@@ -1,6 +1,6 @@
 # Strict detection rules
 
-Recognize OpenSpec only from `openspec/config.yaml` plus actual specs/changes and per-change `.openspec.yaml`. Recognize Spec Kit only from `.specify/integration.json` plus persisted workflow runs. A directory name, obsolete `config.json`, global executable or remembered convention is not adoption evidence.
+Recognize OpenSpec only from `openspec/config.yaml` plus the native `specs` and `changes` roots; every active change must have `.openspec.yaml`. Recognize Spec Kit only from `.specify/integration.json` plus its workflow-runs root; every persisted run must be complete. An adopted provider may have zero active changes/runs, producing an empty mapping so the ledger can deprecate prior objects. A directory name, obsolete `config.json`, global executable or remembered convention is not adoption evidence.
 
 OpenSpec uses only `openspec --version`, `openspec status --change <id> --json`, and `openspec instructions apply --change <id> --json`. Spec Kit uses only `specify version` and `specify workflow status <run-id> --json`. Run with `shell=False`, fixed timeout and schema/identity checks.
 

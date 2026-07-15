@@ -22,7 +22,7 @@ The repository must prove the workflow against itself. OpenSpec is installed out
 
 ## Decisions
 
-1. `deliveryctl status` performs the same verified replay as `validate`, then returns both the full reducer state and a deterministic progress summary. This keeps one authoritative read path and avoids parsing generated view files.
+1. `deliveryctl status` performs the same verified replay as `validate`, then returns both the full reducer state and a deterministic progress summary. `--progress-only` suppresses only the full state. The summary shows provider status beside delivery state and flags either side advancing alone.
 2. Provider artifact equality excludes the observation-only `status` field but still compares delivery/native IDs, parent, type, authority path, content hash, and canonicalization. Actual content changes continue to supersede.
 3. A Spec Kit run produces `SPECKIT-SPEC-<run>` from immutable run inputs and `SPECKIT-RUN-<run>` as a task derived from that spec. Mutable run state remains observation evidence rather than task content identity.
 4. Spec authors commit provider-native files first. A separate integrator runs detector → `observe-provider`; only then may the author record trace nodes, edges, and initial task states using identities returned by verified `status`.
@@ -30,7 +30,7 @@ The repository must prove the workflow against itself. OpenSpec is installed out
 
 ## Risks / Trade-offs
 
-- A full status snapshot may be large → retain strict bounded ledger inputs and provide a compact `progress` section for normal use.
+- A full status snapshot may be large → retain strict bounded ledger inputs and provide `--progress-only` for normal use.
 - Ignoring provider status could hide an important content change → only the status field is ignored; hashes and all identity fields still gate supersession.
 - Provider task file content changes intentionally reset typed identity → status reports such tasks as untracked until they are explicitly re-registered and approved.
 - External anchors reduce checkout portability → the project descriptor makes the requirement discoverable, and missing anchors fail closed.

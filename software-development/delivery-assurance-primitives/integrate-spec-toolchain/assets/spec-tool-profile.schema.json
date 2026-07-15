@@ -45,7 +45,17 @@
           "artifact_type": {"type": "string", "minLength": 1},
           "authority_uri": {"type": "string", "minLength": 1},
           "status": {"type": "string", "enum": ["active", "done", "ready", "blocked", "created", "running", "completed", "paused", "failed", "aborted"]},
-          "content_hash": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"}
+          "content_hash": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+          "content_canonicalization": {"type": "string", "enum": ["raw-v1", "utf8-nfc-lf-v1", "delivery-json-v1"]},
+          "content_selector": {
+            "type": "object",
+            "required": ["kind", "task_id"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {"const": "openspec-task-v1"},
+              "task_id": {"type": "string", "minLength": 1}
+            }
+          }
         }
       }
     },
@@ -90,7 +100,6 @@
           "artifact_root": {"type": "string", "minLength": 1},
           "configuration": {"type": "string", "minLength": 1},
           "authorities": {"minProperties": 1},
-          "id_mapping": {"minProperties": 1},
           "observations": {"minProperties": 1}
         }
       }

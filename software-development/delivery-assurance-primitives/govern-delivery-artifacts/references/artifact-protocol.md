@@ -4,7 +4,7 @@
 
 Every command receives an external trust-root history and caller-held `sequence:event_hash`. The trust root binds `ledger_id` and root-key validity intervals; the expected head detects complete tail rollback that a repository-local hash chain alone cannot detect.
 
-Use identity `artifact_id + version + typed digest`. A digest is exactly `{algorithm: sha256, canonicalization: raw-v1|utf8-nfc-lf-v1|delivery-json-v1, value: 64 lowercase hex}`. Authority is exactly one of pinned Git URI+full commit+path, provider profile digest+native ID+pinned Git authority, or a committed delivery blob. Reject symlinks, submodules, traversal, missing checkout maps and unpinned content.
+Use identity `artifact_id + version + typed digest`. A digest is exactly `{algorithm: sha256, canonicalization: raw-v1|utf8-nfc-lf-v1|delivery-json-v1, value: 64 lowercase hex}`. Authority is exactly one of pinned Git URI+full commit+path, provider profile digest+native ID+pinned Git authority, or a committed delivery blob. Every newly observed materialized provider mapping carries `content_hash` and `content_canonicalization`; both must equal the registered artifact digest before the pinned Git blob is recomputed. Reject symlinks, submodules, traversal, missing checkout maps and unpinned content.
 
 `artifact_registered` creates a stable ID; `artifact_superseded` names the explicit current version. Never infer current from array order. Superseding an upstream artifact deterministically marks its transitive dependents stale.
 

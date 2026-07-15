@@ -239,7 +239,6 @@ PROVIDER_PROFILE = _object({
     "commit": {"type": "string", "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"},
     "id_mapping": {
         "type": "object",
-        "minProperties": 1,
         "additionalProperties": _object({
             "delivery_id": NONEMPTY,
             "native_id": NONEMPTY,
@@ -248,7 +247,12 @@ PROVIDER_PROFILE = _object({
             "authority_uri": NONEMPTY,
             "status": NONEMPTY,
             "content_hash": {"oneOf": [{"type": "string", "pattern": "^[0-9a-f]{64}$"}, {"type": "null"}]},
-        }),
+            "content_canonicalization": {"enum": ["raw-v1", "utf8-nfc-lf-v1", "delivery-json-v1"]},
+            "content_selector": _object({"kind": {"const": "openspec-task-v1"}, "task_id": NONEMPTY}),
+        }, required=[
+            "delivery_id", "native_id", "native_parent_id", "artifact_type",
+            "authority_uri", "status", "content_hash",
+        ]),
     },
     "observation_authority": BLOB_AUTHORITY,
     "observed_at": UTC_TIME,

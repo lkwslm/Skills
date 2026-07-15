@@ -23,8 +23,8 @@ python <deliveryctl.py> validate --root <repo> --trust-root <external-trust-root
 2. 先提取术语、实体、状态机、权限、数据字典和全局不变量，再提取局部需求。
 3. 将规范性陈述原子化为稳定 `REQ-*`、`NFR-*`、`INV-*`、`DEC-*` 和 `OPEN-*`。保留强度、范围、依赖、验收线索与精确来源。
 4. 扫描“必须、不得、仅当、至少、至多、默认、超时、容量、兼容、回滚”等限定词及数字和单位。冲突必须记录为开放问题，不得自行裁决。
-5. 在原生 provider 的权威工件中写入基线内容；不要创建平行 spec、任务表或可编辑追溯表。
-6. 为来源、需求和整体基线对象准备 `artifact_registered` 或 `artifact_superseded` operations；身份必须使用 `{artifact_id, version, digest}`。首次建账时为整体基线对象追加 `state_object_registered(kind=greenfield, initial_state=captured)`。
+5. 把来源、原子需求和整体基线固定为 Git authority 或同一 transaction 发布的 delivery blob；不要提前创建平行 spec、任务表或可编辑追溯表。Provider 原生 spec/task 只由后续 `$write-verifiable-spec` 编写并经 detector/`observe-provider` 登记。
+6. 为来源、需求和整体基线对象准备 `artifact_registered` 或 `artifact_superseded` operations；身份必须使用 `{artifact_id, version, digest}`。首次建账时由具备 `state.write` 的 fact-extractor 为整体基线对象追加 `state_object_registered(kind=greenfield, initial_state=captured)`；该角色不得执行状态迁移。
 7. 为每个来源块和需求准备 `trace_node_recorded`，并用关系为 `derives` 的 `trace_edge_recorded` 建立 `source → requirement` 覆盖。依赖和冲突保留在权威需求工件中；不得发明 schema 未定义的 relation。每个规范性块至少派生一个 requirement，或被明确分类为非规范内容。
 8. 把所有 operations 写入一个 JSON 数组，执行一次签名提交：
 

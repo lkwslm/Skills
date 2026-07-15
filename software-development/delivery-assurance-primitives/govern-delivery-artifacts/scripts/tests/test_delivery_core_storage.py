@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 
@@ -23,6 +25,7 @@ from delivery_core.canonical import (  # noqa: E402
     canonicalize,
     loads_strict,
 )
+from delivery_core.authority import AuthorityError, run_trusted_git  # noqa: E402
 from delivery_core.crypto import (  # noqa: E402
     SignatureError,
     private_key_pem,
@@ -89,6 +92,35 @@ class DeliveryCoreStorageTest(unittest.TestCase):
             canonical_json_bytes({"e\u0301": 1, "\u00e9": 2})
         with self.assertRaises(CanonicalizationError):
             canonicalize(b"x", "unknown-v1")
+
+    @unittest.skipUnless(os.name == "nt", "Windows Job Object regression")
+    def test_trusted_git_descendant_cannot_hold_output_pipe_open(self) -> None:
+        with tempfile.TemporaryDirectory() as runtime_dir, tempfile.TemporaryDirectory() as manifest_dir, tempfile.TemporaryDirectory() as repo_dir:
+            runtime = Path(runtime_dir)
+            source = runtime / "holder.rs"
+            executable = runtime / "git.exe"
+            source.write_text(
+                'use std::process::Command; fn main(){ Command::new("cmd.exe").args(["/c","ping -n 31 127.0.0.1 >nul"]).spawn().unwrap(); println!("ok"); }',
+                encoding="utf-8",
+            )
+            subprocess.run(["rustc", str(source), "-O", "-o", str(executable)], check=True, capture_output=True)
+            files = {
+                path.relative_to(runtime).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+                for path in runtime.rglob("*") if path.is_file()
+            }
+            manifest = Path(manifest_dir) / "git-runtime.json"
+            manifest.write_text(
+                json.dumps({"schema_version": "1.0", "root": str(runtime), "files": files}, sort_keys=True, separators=(",", ":")),
+                encoding="utf-8",
+            )
+            started = time.monotonic()
+            with self.assertRaisesRegex(AuthorityError, "descendant processes"):
+                run_trusted_git(
+                    Path(repo_dir), executable, files["git.exe"], "status",
+                    manifest_path=manifest,
+                    manifest_sha256=hashlib.sha256(manifest.read_bytes()).hexdigest(),
+                )
+            self.assertLess(time.monotonic() - started, 12.0)
 
     def test_ed25519_pem_fingerprint_and_signature(self) -> None:
         private_pem = private_key_pem(self.private_key)
@@ -236,6 +268,10 @@ class DeliveryCoreStorageTest(unittest.TestCase):
                     expected_revision=genesis,
                     event=event,
                     key_resolver=self.resolver,
+                    views={
+                        "state.json": {"provider_profiles": ["PROFILE-openspec@1"]},
+                        "blobs/sha256/" + "a" * 64: b"provider observation",
+                    },
                     fault_injector=crash,
                 )
             self.assertEqual(read_head(delivery), genesis)
@@ -251,6 +287,11 @@ class DeliveryCoreStorageTest(unittest.TestCase):
                 key_resolver=self.resolver,
             )
             self.assertEqual(recovered, Revision(1, event["event_hash"]))
+            generation = delivery / "generations" / (
+                "{:020d}-{}".format(recovered.sequence, recovered.event_hash)
+            )
+            self.assertTrue((generation / "views/state.json").is_file())
+            self.assertTrue((generation / "views/blobs/sha256" / ("a" * 64)).is_file())
             inspect_store(
                 delivery,
                 expected_revision=recovered,

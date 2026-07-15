@@ -4,13 +4,15 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
+import unicodedata
 from typing import Any
 
-from .base import MAX_PROVIDER_FILES, ProviderAdapter, ProviderError, SCHEMA_VERSION, confined_relative, hash_file, hash_json, load_yaml
+from .base import MAX_PROVIDER_FILES, ProviderAdapter, ProviderError, SCHEMA_VERSION, confined_relative, hash_bytes, hash_file, hash_json, load_yaml
 
 
 CHANGE_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 ARTIFACT_STATES = {"done", "ready", "blocked"}
+TASK_ITEM = re.compile(r"^- \[([ xX])\] ([A-Za-z0-9][A-Za-z0-9._-]*)\s+(.+?)\s*$")
 
 
 class OpenSpecProvider(ProviderAdapter):
@@ -43,6 +45,30 @@ class OpenSpecProvider(ProviderAdapter):
         except ValueError as exc:
             raise ProviderError("PROVIDER_LAYOUT_INVALID", f"OpenSpec output path escapes repository: {output_path}") from exc
 
+    def _task_items(self, path: Path, change_id: str) -> list[tuple[str, str, bytes]]:
+        try:
+            text = unicodedata.normalize(
+                "NFC", path.read_text(encoding="utf-8").replace("\r\n", "\n").replace("\r", "\n")
+            )
+        except (OSError, UnicodeDecodeError) as exc:
+            raise ProviderError("PROVIDER_LAYOUT_INVALID", f"cannot read OpenSpec tasks for {change_id}: {exc}", 2) from exc
+        result: list[tuple[str, str, bytes]] = []
+        seen: set[str] = set()
+        for line in text.splitlines():
+            match = TASK_ITEM.fullmatch(line)
+            if match is None:
+                continue
+            task_id = match.group(2)
+            if task_id in seen:
+                raise ProviderError("PROVIDER_DATA_INVALID", f"duplicate OpenSpec task ID for {change_id}: {task_id}", 2)
+            seen.add(task_id)
+            status = "done" if match.group(1).lower() == "x" else "ready"
+            material = f"- [ ] {task_id} {match.group(3)}\n".encode("utf-8")
+            result.append((task_id, status, material))
+        if not result:
+            raise ProviderError("PROVIDER_DATA_INVALID", f"OpenSpec tasks file has no standard checkbox tasks: {change_id}", 2)
+        return result
+
     def detect(self) -> dict[str, Any]:
         config_path = self.repo / "openspec" / "config.yaml"
         config_uri = confined_relative(self.repo, config_path)
@@ -59,8 +85,6 @@ class OpenSpecProvider(ProviderAdapter):
         change_dirs = sorted(path for path in changes_root.iterdir() if path.is_dir() and path.name != "archive")
         if len(change_dirs) > MAX_PROVIDER_FILES:
             raise ProviderError("PROVIDER_LAYOUT_INVALID", "OpenSpec contains too many active changes")
-        if not change_dirs:
-            raise ProviderError("PROVIDER_LAYOUT_INVALID", "OpenSpec has no active changes")
         version = self.require_runtime()
         authorities: dict[str, dict[str, str]] = {
             "configuration": {"uri": config_uri, "writer": "openspec"},
@@ -101,8 +125,10 @@ class OpenSpecProvider(ProviderAdapter):
             if not isinstance(artifacts, list) or not artifacts:
                 raise ProviderError("PROVIDER_CLI_OUTPUT_INVALID", f"OpenSpec status has no artifacts for {change_id}")
             instructions = self.run_json(("instructions", "apply", "--change", change_id, "--json"))
-            if instructions.get("changeName") != change_id or instructions.get("schemaName") != change_schema or instructions.get("artifactId") != "apply":
+            if instructions.get("changeName") != change_id or instructions.get("schemaName") != change_schema:
                 raise ProviderError("PROVIDER_CLI_OUTPUT_INVALID", f"OpenSpec instructions identity mismatch for {change_id}")
+            if instructions.get("state") not in {"ready", "blocked", "complete"}:
+                raise ProviderError("PROVIDER_CLI_OUTPUT_INVALID", f"OpenSpec instructions state is invalid for {change_id}")
             if not isinstance(instructions.get("instruction"), str) or not instructions["instruction"]:
                 raise ProviderError("PROVIDER_CLI_OUTPUT_INVALID", f"OpenSpec instructions are incomplete for {change_id}")
             native_change_id = f"openspec:change:{change_id}"
@@ -114,6 +140,7 @@ class OpenSpecProvider(ProviderAdapter):
                 "authority_uri": metadata_uri,
                 "status": "done" if status["isComplete"] else "active",
                 "content_hash": hash_file(metadata_path),
+                "content_canonicalization": "raw-v1",
             }
             authorities[native_change_id] = {"uri": metadata_uri, "writer": "openspec"}
             observations[f"metadata:{change_id}"] = hash_file(metadata_path)
@@ -143,6 +170,25 @@ class OpenSpecProvider(ProviderAdapter):
                 })
                 for index, path in enumerate(paths):
                     uri = confined_relative(self.repo, path)
+                    if artifact_id == "tasks":
+                        for task_id, task_status, material in self._task_items(path, change_id):
+                            native_id = f"openspec:change:{change_id}:task:{task_id}"
+                            delivery_suffix = re.sub(r"[^A-Za-z0-9]+", "-", task_id).strip("-")
+                            mappings[native_id] = {
+                                "delivery_id": f"OPENSPEC-{change_id}-task-{delivery_suffix}",
+                                "native_id": f"task:{task_id}",
+                                "native_parent_id": change_id,
+                                "artifact_type": "task",
+                                "authority_uri": uri,
+                                "status": task_status,
+                                "content_hash": hash_bytes(material),
+                                "content_canonicalization": "utf8-nfc-lf-v1",
+                                "content_selector": {"kind": "openspec-task-v1", "task_id": task_id},
+                            }
+                            authorities[native_id] = {"uri": uri, "writer": "openspec"}
+                            observations[f"task:{change_id}:{task_id}"] = hash_bytes(material)
+                        observations[f"artifact:{change_id}:{artifact_id}:{index + 1}"] = hash_file(path)
+                        continue
                     suffix = "" if len(paths) == 1 and not any(character in output_path for character in "*?[") else f":file:{hash_json(uri)}"
                     native_id = f"openspec:change:{change_id}:{artifact_id}{suffix}"
                     mappings[native_id] = {
@@ -153,6 +199,7 @@ class OpenSpecProvider(ProviderAdapter):
                         "authority_uri": uri,
                         "status": artifact_status,
                         "content_hash": hash_file(path),
+                        "content_canonicalization": "raw-v1",
                     }
                     authorities[native_id] = {"uri": uri, "writer": "openspec"}
                     observations[f"artifact:{change_id}:{artifact_id}:{index + 1}"] = mappings[native_id]["content_hash"]

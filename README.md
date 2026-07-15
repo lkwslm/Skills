@@ -16,8 +16,9 @@
 | 根据完整设计创建一个新系统 | `$orchestrate-system-realization` | 设计是主要事实来源，强调全局一致性、跨域契约和系统级验收 |
 | 修改已有生产系统、修复缺陷或执行局部迁移 | `$orchestrate-production-change` | 代码、配置、运行行为、契约和批准意图共同构成事实来源，强调兼容、灰度和恢复 |
 | 大型重构、平台迁移或在旧系统中建设新子系统 | `$orchestrate-production-change` | 使用 Brownfield 总控作为唯一顶层 owner，在内部委托 Greenfield 子流程；最终状态仍由生产验证决定 |
+| 从长篇设计分解规格并逐任务实现、审计 | `$orchestrate-spec-delivery` | 用原生 OpenSpec/Spec Kit 与签名 `.delivery` 账本记录需求、规格、任务和进度 |
 | 只初始化、恢复或审计 `.delivery/` 工件 | `$govern-delivery-artifacts` | 运行状态、审批、权限、追溯、陈旧传播和证据门禁 |
-| 只探测仓库已有的 Spec 工具 | `$integrate-spec-toolchain` | 识别 Spec Kit、OpenSpec、Kiro Specs 或 fallback，不自动安装、升级或迁移工具 |
+| 只探测仓库已有的 Spec 工具 | `$integrate-spec-toolchain` | 严格识别原生 OpenSpec 或 Spec Kit；缺失、冲突或未固定运行时均 fail closed |
 
 不要同时启动两个可写总控。混合流程必须由 `$orchestrate-production-change` 持有父变更、迁移、发布和最终状态。
 
@@ -33,10 +34,11 @@
    根据 docs/design/ 下的已批准设计开始新系统交付。
    ```
 
-2. 需要全局使用时，将以下三个目录下的 16 个 Skill 子目录分别安装到 `$CODEX_HOME/skills/`；未设置 `CODEX_HOME` 时使用 `~/.codex/skills/`：
+2. 需要全局使用时，将以下四个目录下的 21 个 Skill 子目录分别安装到 `$CODEX_HOME/skills/`；未设置 `CODEX_HOME` 时使用 `~/.codex/skills/`：
 
    ```text
    software-development/design-to-system-realization/
+   software-development/design-to-verified-implementation/
    software-development/production-change-to-verified-release/
    software-development/delivery-assurance-primitives/
    ```
@@ -91,14 +93,36 @@ orchestrate-production-change
 
 总控会先调用 `$govern-delivery-artifacts` 和 `$integrate-spec-toolchain`。通常应从总控开始，而不是手工跳过前置阶段直接调用实施 Skill。
 
-## 16 个 Skills 的用途
+### 设计到可验证实现
+
+```text
+orchestrate-spec-delivery
+  → index-design-docs
+  → write-verifiable-spec
+  → implement-spec-task
+  → audit-spec-conformance
+```
+
+该流程适合像本仓库一样由设计驱动、同时需要让 OpenSpec 结果与 `.delivery` 状态对齐的项目。Provider 负责可编辑的 spec/task 正文；账本记录固定身份、审批、claim、生命周期和证据。
+
+## 21 个 Skills 的用途
 
 ### 共享治理与工具集成
 
 | Skill | 何时使用 | 主要结果 |
 |---|---|---|
 | `govern-delivery-artifacts` | 初始化、验证、恢复或审计 `.delivery/`；执行状态、审批、权限、追溯、陈旧和证据门禁 | 统一 registry、状态记录、门禁结果和可复核证据 |
-| `integrate-spec-toolchain` | 接入已有 Spec Kit、OpenSpec、Kiro Specs、外部规格系统或 fallback；核对声明 CLI 的实际路径和版本 | Spec 工具 profile、运行时证据、权威工件映射、能力缺口、后续动作和信任边界 |
+| `integrate-spec-toolchain` | 接入已有原生 Spec Kit 或 OpenSpec；核对 CLI 的实际路径、版本和完整运行时 | Spec 工具 profile、运行时证据、权威工件映射、能力缺口和信任边界 |
+
+### Design-to-Verified Skills
+
+| Skill | 何时使用 | 主要结果 |
+|---|---|---|
+| `orchestrate-spec-delivery` | 从设计启动或恢复规格驱动交付 | 已验证 revision、provider、ready/blocked 任务和下一步 |
+| `index-design-docs` | 把长设计原子化为稳定需求并建立来源覆盖 | Git-pinned 来源、需求、基线和 trace nodes/edges |
+| `write-verifiable-spec` | 把需求写入原生 provider 并由独立身份登记 | 原生 spec/task、provider observation、审批与任务初始状态 |
+| `implement-spec-task` | 实施一个已批准且依赖满足的任务 | 有 claim 约束的最小 diff、测试和 evidence |
+| `audit-spec-conformance` | 独立验证任务是否满足规格 | 条款级 audit、trace closure 和 accepted/blocked 结论 |
 
 ### Greenfield Skills
 
@@ -130,18 +154,19 @@ orchestrate-production-change
 
 ```text
 .delivery/
-├─ delivery.json
-├─ artifact-registry.json
-├─ state.json
-├─ traceability.json
-├─ approvals.json
-├─ context-packages/
-├─ evidence/
-├─ audits/
-└─ runs/
+├─ HEAD.json
+├─ generations/
+│  └─ <sequence>-<event-hash>/
+│     ├─ event.json
+│     ├─ manifest.json
+│     ├─ state.json
+│     └─ views/
+└─ .transactions/
 ```
 
-跨文件引用统一使用 `artifact_id + version + content_hash`。Spec 工具 profile、设计基线、需求、契约、任务、context package、实现引用、测试、evidence 和 audit 都必须登记到 artifact registry。上游 hash 变化后，下游结论会变为 `stale`，重新验证前不得继续推进。
+`HEAD.json` 只是签名事件链的仓库内头；外部 trust root、私钥和调用方确认的 expected head 不得提交。跨记录引用统一使用 `artifact_id + version + typed digest`。恢复时先完整 replay 和 authority 校验，再用 `deliveryctl status --progress-only` 读取 provider、provider/delivery 漂移、任务状态、依赖、claim、ready 集合和 trace 覆盖；不得从聊天历史推断进度。
+
+OpenSpec/Spec Kit 的正文始终由 provider writer 维护。Detector 生成稳定映射，`deliveryctl observe-provider` 将映射签名登记到 ledger；OpenSpec 每个标准 checkbox 和 Spec Kit 每次 run 都有独立的 delivery task 身份。状态变化不会伪造新的内容身份。
 
 术语必须严格区分：
 
@@ -151,9 +176,8 @@ orchestrate-production-change
 
 ## 安全边界
 
-- Skills 默认不安装、初始化、升级或迁移外部 Spec 工具。
-- 仓库未采用 Spec 工具时进入 `fallback`，并明确列出继续内置格式或申请采用工具两种动作。
-- 仓库已经声明 provider 但 CLI 缺失或版本不匹配时结论为 `BLOCKED`，不得用 fallback 创建第二套 Spec；安装和初始化必须单独授权。
+- Skills 默认不安装、初始化、升级或迁移外部 Spec 工具；本仓库的自托管试点是经过明确授权的例外。
+- 未采用受支持 provider、同时采用多个 provider、CLI 缺失或运行时未固定时结论为 `BLOCKED`，不得创建第二套平行规格。
 - 分析和 dry-run 不修改目标业务代码，不连接或发布生产系统。
 - 实现者不得修改设计基线、Spec、审批、冻结契约或测试预言来迁就实现。
 - 验证者不得在验证过程中修复实现或改写 Spec。
@@ -174,6 +198,10 @@ python -m unittest discover `
 
 python -m unittest discover `
   -s software-development/delivery-assurance-primitives/integrate-spec-toolchain/scripts/tests `
+  -v
+
+python -m unittest discover `
+  -s software-development/tests `
   -v
 ```
 

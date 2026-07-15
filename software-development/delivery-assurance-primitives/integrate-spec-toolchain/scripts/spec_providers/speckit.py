@@ -58,8 +58,6 @@ class SpecKitProvider(ProviderAdapter):
         run_dirs = sorted(path for path in runs_root.iterdir() if path.is_dir())
         if len(run_dirs) > MAX_PROVIDER_FILES:
             raise ProviderError("PROVIDER_LAYOUT_INVALID", "Spec Kit contains too many persisted workflow runs")
-        if not run_dirs:
-            raise ProviderError("PROVIDER_LAYOUT_INVALID", "Spec Kit has no persisted workflow runs")
         version = self.require_runtime()
         integration_status = self.run_json(("integration", "status", "--json"))
         if integration_status.get("status") not in {"ok", "warning"}:
@@ -101,15 +99,28 @@ class SpecKitProvider(ProviderAdapter):
             state_uri = confined_relative(self.repo, required["state.json"])
             inputs_uri = confined_relative(self.repo, required["inputs.json"])
             log_uri = confined_relative(self.repo, required["log.jsonl"])
-            native_id = f"spec-kit:run:{run_id}"
-            mappings[native_id] = {
+            spec_native_id = f"spec-kit:run:{run_id}:spec"
+            task_native_id = f"spec-kit:run:{run_id}:task"
+            spec_identity = f"{run_id}:spec"
+            mappings[spec_native_id] = {
+                "delivery_id": f"SPECKIT-SPEC-{run_id}",
+                "native_id": spec_identity,
+                "native_parent_id": None,
+                "artifact_type": "spec",
+                "authority_uri": inputs_uri,
+                "status": "done" if state["status"] == "completed" else "active",
+                "content_hash": hash_json(inputs),
+                "content_canonicalization": "delivery-json-v1",
+            }
+            mappings[task_native_id] = {
                 "delivery_id": f"SPECKIT-RUN-{run_id}",
                 "native_id": run_id,
-                "native_parent_id": state["workflow_id"],
+                "native_parent_id": spec_identity,
                 "artifact_type": "workflow-run",
-                "authority_uri": state_uri,
+                "authority_uri": inputs_uri,
                 "status": state["status"],
-                "content_hash": hash_json(state),
+                "content_hash": hash_json(inputs),
+                "content_canonicalization": "delivery-json-v1",
             }
             authorities[f"run:{run_id}:state"] = {"uri": state_uri, "writer": "spec-kit"}
             authorities[f"run:{run_id}:inputs"] = {"uri": inputs_uri, "writer": "spec-kit"}

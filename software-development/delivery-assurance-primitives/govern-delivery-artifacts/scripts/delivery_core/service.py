@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import os
 import stat
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 from typing import Any, Dict, Mapping, Sequence
 
@@ -87,7 +87,7 @@ def _validate_provider_observation(observed: Any, record: Mapping[str, Any]) -> 
     trust = observed.get("trust")
     collections_valid = (
         isinstance(observed.get("authorities"), dict) and bool(observed["authorities"])
-        and isinstance(observed.get("id_mapping"), dict) and bool(observed["id_mapping"])
+        and isinstance(observed.get("id_mapping"), dict)
         and isinstance(observed.get("capabilities"), list) and bool(observed["capabilities"])
         and isinstance(observed.get("command_entrypoints"), dict) and bool(observed["command_entrypoints"])
         and isinstance(observed.get("observations"), dict) and bool(observed["observations"])
@@ -96,10 +96,41 @@ def _validate_provider_observation(observed: Any, record: Mapping[str, Any]) -> 
         raise ServiceError("provider observation native evidence is incomplete")
     expected_executable = "openspec" if record["provider"] == "openspec" else "specify"
     expected_version_args = ["--version"] if record["provider"] == "openspec" else ["version"]
+    expected_root = "openspec" if record["provider"] == "openspec" else ".specify"
+    expected_configuration = "openspec/config.yaml" if record["provider"] == "openspec" else ".specify/integration.json"
+    mapping_paths_valid = True
+    root_path = PurePosixPath(expected_root)
+    for mapping in observed.get("id_mapping", {}).values():
+        if not isinstance(mapping, dict):
+            mapping_paths_valid = False
+            break
+        path = PurePosixPath(str(mapping.get("authority_uri", "")))
+        canonicalization = mapping.get("content_canonicalization", "raw-v1")
+        if (
+            path.is_absolute()
+            or tuple(path.parts[:len(root_path.parts)]) != root_path.parts
+            or canonicalization not in {"raw-v1", "utf8-nfc-lf-v1", "delivery-json-v1"}
+            or (
+                mapping.get("content_selector") is not None
+                and (
+                    observed.get("provider") != "openspec"
+                    or not isinstance(mapping.get("content_selector"), dict)
+                    or set(mapping["content_selector"]) != {"kind", "task_id"}
+                    or mapping["content_selector"].get("kind") != "openspec-task-v1"
+                    or not isinstance(mapping["content_selector"].get("task_id"), str)
+                    or not mapping["content_selector"]["task_id"]
+                )
+            )
+        ):
+            mapping_paths_valid = False
+            break
     if (
         observed.get("profile_id") != record["profile_id"]
         or observed.get("provider") != record["provider"]
         or observed.get("mode") != "native"
+        or observed.get("artifact_root") != expected_root
+        or observed.get("configuration") != expected_configuration
+        or not mapping_paths_valid
         or observed.get("version") != record["provider_version"]
         or observed.get("id_mapping") != record["id_mapping"]
         or not all(isinstance(observed.get(field), str) and observed[field] for field in ("adapter_version", "version_source", "artifact_root", "configuration"))

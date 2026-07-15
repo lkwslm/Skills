@@ -187,6 +187,41 @@ class DeliveryDomainTest(unittest.TestCase):
         valid = apply(trusted_state(), self.profile_operation())
         self.assertIn("PROFILE-1@1", valid["provider_profiles"])
 
+    def test_spec_integrator_can_record_only_provider_backed_spec_artifacts(self) -> None:
+        state = trusted_state()
+        state["trust_policy"]["root_key_fingerprint"] = "sha256:" + "f" * 64
+        integrator = state["trust_policy"]["actors"][0]
+        integrator["roles"] = ["spec-integrator"]
+        integrator["capabilities"] = ["provider.write", "artifact.write"]
+        integrator["path_scopes"] = ["openspec"]
+        state = apply(state, self.profile_operation())
+        profile = state["provider_profiles"]["PROFILE-1@1"]
+        digest = {"algorithm": "sha256", "canonicalization": "raw-v1", "value": "a" * 64}
+        provider_artifact = artifact("SPEC-1", "spec", digest=digest)
+        provider_artifact["authority"] = {
+            "schema_version": "1.0", "kind": "provider", "profile_id": "PROFILE-1",
+            "profile_version": "1", "profile_digest": profile["digest"], "native_id": "native-1",
+            "artifact_kind": "spec", "repository_uri": "https://example.invalid/repo.git",
+            "commit": COMMIT, "path": "openspec/specs/example/spec.md",
+        }
+        recorded = apply(
+            state,
+            operation("OP-PROVIDER-ARTIFACT", "artifact_registered", {"artifact": provider_artifact}),
+            sequence=3,
+            event_id="EVENT-3",
+        )
+        self.assertEqual(recorded["current_versions"]["SPEC-1"], "1")
+
+        git_artifact = artifact("SPEC-2", "spec")
+        git_artifact["authority"]["path"] = "openspec/spec-2.md"
+        with self.assertRaisesRegex(ReducerError, "role cannot write artifact type spec"):
+            apply(
+                state,
+                operation("OP-GIT-SPEC", "artifact_registered", {"artifact": git_artifact}),
+                sequence=3,
+                event_id="EVENT-3",
+            )
+
     def test_role_separation_allows_record_artifacts_but_blocks_conflicted_auditors_and_approvers(self) -> None:
         state = trusted_state()
         state["trust_policy"]["root_key_fingerprint"] = "sha256:" + "f" * 64
@@ -252,6 +287,28 @@ class DeliveryDomainTest(unittest.TestCase):
                 event_id="EVENT-WRONG-KEY",
                 at=NOW,
             )
+
+    def test_fact_extractor_and_spec_author_can_register_but_not_transition_state(self) -> None:
+        for role in ("fact-extractor", "spec-author"):
+            with self.subTest(role=role):
+                state = trusted_state()
+                state["trust_policy"]["root_key_fingerprint"] = "sha256:" + "f" * 64
+                actor_value = state["trust_policy"]["actors"][0]
+                actor_value["roles"] = [role]
+                actor_value["capabilities"] = ["state.write"]
+                authorize_operation(
+                    state,
+                    {"type": "state_object_registered", "payload": {}},
+                    actor_id="actor-1", signer_fingerprint=ACTOR_FINGERPRINT,
+                    sequence=2, at=NOW,
+                )
+                with self.assertRaisesRegex(PermissionDenied, "role does not own"):
+                    authorize_operation(
+                        state,
+                        {"type": "state_transitioned", "payload": {}},
+                        actor_id="actor-1", signer_fingerprint=ACTOR_FINGERPRINT,
+                        sequence=2, at=NOW,
+                    )
 
     def test_service_rejects_a_real_ed25519_key_not_bound_to_actor(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

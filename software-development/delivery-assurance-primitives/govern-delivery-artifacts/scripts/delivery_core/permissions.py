@@ -87,7 +87,14 @@ def authorize_operation(
             "audit.write": {"verifier"},
             "evidence.write": {"implementer", "verifier"},
             "claim.write": {"human-approver", "implementer", "orchestrator", "verifier"},
-            "state.write": {"human-approver", "implementer", "orchestrator", "verifier", "release-controller"},
+            "state.write": (
+                {
+                    "fact-extractor", "spec-author", "human-approver", "implementer",
+                    "orchestrator", "verifier", "release-controller",
+                }
+                if operation["type"] == "state_object_registered"
+                else {"human-approver", "implementer", "orchestrator", "verifier", "release-controller"}
+            ),
             "provider.write": {"spec-integrator"},
             "migration.write": {"migration-controller"},
         }.get(capability)
@@ -107,7 +114,12 @@ def authorize_operation(
                 "spec-tool-profile": {"spec-integrator"}, "migration": {"migration-controller"},
             }
             artifact_type = payload["artifact"]["artifact_type"]
-            if roles.isdisjoint(artifact_roles[artifact_type]):
+            provider_registration = (
+                payload["artifact"]["authority"]["kind"] == "provider"
+                and "spec-integrator" in roles
+                and artifact_type in {"spec", "task"}
+            )
+            if not provider_registration and roles.isdisjoint(artifact_roles[artifact_type]):
                 raise PermissionDenied(f"actor role cannot write artifact type {artifact_type}")
     paths: list[str] = []
     environment: str | None = None

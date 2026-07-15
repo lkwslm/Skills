@@ -1,0 +1,58 @@
+name: Skills release tests
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: skills-tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-python-39:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.9"
+          cache: pip
+          cache-dependency-path: |
+            software-development/delivery-assurance-primitives/govern-delivery-artifacts/scripts/requirements.txt
+            software-development/delivery-assurance-primitives/integrate-spec-toolchain/scripts/requirements.txt
+      - name: Verify toolchain
+        shell: pwsh
+        run: |
+          python --version
+          rustc --version
+          git --version
+      - name: Install hash-locked dependencies
+        shell: pwsh
+        run: |
+          python -m pip install -r software-development/delivery-assurance-primitives/govern-delivery-artifacts/scripts/requirements.txt
+          python -m pip install -r software-development/delivery-assurance-primitives/integrate-spec-toolchain/scripts/requirements.txt
+      - name: Test delivery governance
+        working-directory: software-development/delivery-assurance-primitives/govern-delivery-artifacts
+        run: python -m unittest discover -s scripts/tests -v
+      - name: Test provider detector
+        working-directory: software-development/delivery-assurance-primitives/integrate-spec-toolchain
+        run: python -m unittest discover -s scripts/tests -v
+      - name: Test repository Skills
+        run: python -m unittest discover -s software-development/tests -v
+      - name: Compile Python sources
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem software-development -Recurse -Filter '*.py' | ForEach-Object { $_.FullName }
+          python -m py_compile @files
+      - name: Verify tests leave no tracked changes
+        shell: pwsh
+        run: |
+          git diff --check
+          if (git status --porcelain) { git status --short; throw 'tests modified the checkout' }

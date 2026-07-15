@@ -139,10 +139,43 @@ class DetectSpecToolTest(unittest.TestCase):
         self.assertNotIn("openspec:change:add-login:tasks", profile["id_mapping"])
         self.assertIn("artifact-state:add-login:tasks", profile["observations"])
         self.assertTrue(all("*" not in item["authority_uri"] for item in profile["id_mapping"].values()))
+        self.assertEqual(
+            profile["id_mapping"]["openspec:change:add-login:proposal"]["content_canonicalization"],
+            "raw-v1",
+        )
         self.assertEqual(len(profile["id_mapping"]["openspec:change:add-login:proposal"]["content_hash"]), 64)
         self.assertIn("status:add-login", profile["observations"])
         self.assertIn("instructions:add-login", profile["observations"])
         self.assertEqual(validate_schema(profile, PROFILE_SCHEMA), [])
+
+    def test_openspec_checkbox_tasks_have_stable_individual_identities(self) -> None:
+        with tempfile.TemporaryDirectory() as repo_dir, tempfile.TemporaryDirectory() as cli_dir:
+            repo = Path(repo_dir)
+            shutil.copytree(FIXTURES / "native-openspec", repo, dirs_exist_ok=True)
+            tasks = repo / "openspec" / "changes" / "add-login" / "tasks.md"
+            tasks.write_text("## 1. Delivery\n\n- [ ] 1.1 Add status command\n- [x] 1.2 Add recovery test\n", encoding="utf-8")
+            status_path = repo / "cli" / "status.json"
+            status = json.loads(status_path.read_text(encoding="utf-8"))
+            status["artifacts"][-1] = {"id": "tasks", "outputPath": "tasks.md", "status": "done"}
+            status_path.write_text(json.dumps(status), encoding="utf-8")
+            environment = fake_provider_cli(Path(cli_dir), "openspec", repo)
+            first = run_repo(repo, environment)
+            self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
+            first_profile = json.loads(first.stdout)["profile"]
+            first_task = first_profile["id_mapping"]["openspec:change:add-login:task:1.1"]
+            second_task = first_profile["id_mapping"]["openspec:change:add-login:task:1.2"]
+            self.assertEqual(first_task["status"], "ready")
+            self.assertEqual(second_task["status"], "done")
+            self.assertEqual(first_task["content_selector"]["task_id"], "1.1")
+            self.assertEqual(first_task["content_canonicalization"], "utf8-nfc-lf-v1")
+            self.assertEqual(validate_schema(first_profile, PROFILE_SCHEMA), [])
+
+            tasks.write_text("## 1. Delivery\n\n- [x] 1.1 Add status command\n- [x] 1.2 Add recovery test\n", encoding="utf-8")
+            second = run_repo(repo, environment)
+            self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
+            changed = json.loads(second.stdout)["profile"]["id_mapping"]["openspec:change:add-login:task:1.1"]
+            self.assertEqual(changed["status"], "done")
+            self.assertEqual(changed["content_hash"], first_task["content_hash"])
 
     def test_native_speckit_reads_all_persisted_run_files(self) -> None:
         fixture = FIXTURES / "native-speckit"
@@ -152,13 +185,38 @@ class DetectSpecToolTest(unittest.TestCase):
         profile = json.loads(result.stdout)["profile"]
         self.assertEqual((profile["provider"], profile["mode"]), ("spec-kit", "native"))
         self.assertTrue(profile["id_mapping"])
-        self.assertEqual(profile["id_mapping"]["spec-kit:run:run-001"]["status"], "paused")
-        self.assertEqual(len(profile["id_mapping"]["spec-kit:run:run-001"]["content_hash"]), 64)
+        task = profile["id_mapping"]["spec-kit:run:run-001:task"]
+        spec = profile["id_mapping"]["spec-kit:run:run-001:spec"]
+        self.assertEqual(task["status"], "paused")
+        self.assertEqual(task["native_parent_id"], spec["native_id"])
+        self.assertEqual(spec["artifact_type"], "spec")
+        self.assertEqual(task["authority_uri"], spec["authority_uri"])
+        self.assertEqual(
+            task["content_canonicalization"],
+            "delivery-json-v1",
+        )
+        self.assertEqual(len(task["content_hash"]), 64)
         self.assertIn("state:run-001", profile["observations"])
         self.assertIn("inputs:run-001", profile["observations"])
         self.assertIn("log:run-001", profile["observations"])
         self.assertIn("cli-integration-status", profile["observations"])
         self.assertEqual(validate_schema(profile, PROFILE_SCHEMA), [])
+
+    def test_empty_native_state_is_a_valid_observation_for_deprecation(self) -> None:
+        cases = (
+            ("openspec", "native-openspec", Path("openspec/changes/add-login")),
+            ("spec-kit", "native-speckit", Path(".specify/workflows/runs/run-001")),
+        )
+        for provider, fixture_name, active_path in cases:
+            with self.subTest(provider=provider), tempfile.TemporaryDirectory() as repo_dir, tempfile.TemporaryDirectory() as cli_dir:
+                repo = Path(repo_dir)
+                shutil.copytree(FIXTURES / fixture_name, repo, dirs_exist_ok=True)
+                shutil.rmtree(repo / active_path)
+                result = run_repo(repo, fake_provider_cli(Path(cli_dir), provider, repo))
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                profile = json.loads(result.stdout)["profile"]
+                self.assertEqual(profile["id_mapping"], {})
+                self.assertEqual(validate_schema(profile, PROFILE_SCHEMA), [])
 
     def test_no_provider_is_blocked_without_fallback(self) -> None:
         result = run_repo(FIXTURES / "no-provider")
@@ -225,6 +283,18 @@ class DetectSpecToolTest(unittest.TestCase):
             status = json.loads(status_path.read_text(encoding="utf-8"))
             status["changeName"] = "another-change"
             status_path.write_text(json.dumps(status), encoding="utf-8")
+            result = run_repo(repo, fake_provider_cli(Path(cli_dir), "openspec", repo))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(error_code(result), "PROVIDER_CLI_OUTPUT_INVALID")
+
+    def test_openspec_instructions_require_official_state_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, tempfile.TemporaryDirectory() as cli_dir:
+            repo = Path(temp) / "repo"
+            shutil.copytree(FIXTURES / "native-openspec", repo)
+            instructions_path = repo / "cli/instructions.json"
+            instructions = json.loads(instructions_path.read_text(encoding="utf-8"))
+            instructions.pop("state")
+            instructions_path.write_text(json.dumps(instructions), encoding="utf-8")
             result = run_repo(repo, fake_provider_cli(Path(cli_dir), "openspec", repo))
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(error_code(result), "PROVIDER_CLI_OUTPUT_INVALID")

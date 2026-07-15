@@ -1,6 +1,6 @@
 {
   "changeName": "add-login",
   "schemaName": "spec-driven",
-  "artifactId": "apply",
+  "state": "ready",
   "instruction": "Complete the declared tasks after their dependencies are ready."
 }

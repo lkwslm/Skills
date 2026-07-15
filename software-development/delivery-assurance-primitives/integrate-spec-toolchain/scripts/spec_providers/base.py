@@ -457,7 +457,10 @@ class ProviderAdapter:
 
             def drain(stream: Any, buffer: bytearray) -> None:
                 while True:
-                    chunk = stream.read(64 * 1024)
+                    try:
+                        chunk = stream.read(64 * 1024)
+                    except (OSError, ValueError):
+                        return
                     if not chunk:
                         return
                     if len(buffer) + len(chunk) > MAX_CLI_OUTPUT_BYTES:
@@ -497,6 +500,7 @@ class ProviderAdapter:
                 process.stdout.close(); process.stderr.close()
                 raise ProviderError("PROVIDER_CLI_FAILED", "provider CLI left descendant processes holding output pipes", 3)
             if job_handle: ctypes.windll.kernel32.CloseHandle(job_handle)
+            process.stdout.close(); process.stderr.close()
             if exceeded.is_set():
                 raise ProviderError("PROVIDER_CLI_OUTPUT_INVALID", "provider CLI output exceeds the 4 MiB limit")
             returncode = process.returncode

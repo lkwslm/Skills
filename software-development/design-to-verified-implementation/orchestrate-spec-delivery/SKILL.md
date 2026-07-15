@@ -16,16 +16,16 @@ description: 以 deliveryctl 签名账本编排从长篇设计到原生 OpenSpec
 ## 启动流程
 
 1. 读取项目规则、仓库状态、设计入口和 [project-layout.md](references/project-layout.md)，只判定 signed ledger、旧存储或无账本三种状态，不读取旧记录内容。
-2. 已有 signed ledger 时，用外部 trust root 与调用方给定的 expected head 运行 `deliveryctl validate`；失败即停止。
+2. 已有 signed ledger 时，从 `.delivery-project.json` 定位 CLI、外部 trust/checkpoint 和 Git runtime，设置 `PYTHONDONTWRITEBYTECODE=1`，用调用方给定的 expected head 运行 `deliveryctl validate`，随后用完全相同的 authority pins 运行 `deliveryctl status --progress-only`；失败即停止。只用返回的 `progress` 恢复 provider、provider/delivery 对齐、任务、依赖、claim 和下一步。
 3. 无账本时，仅在明确授权的新项目中由独立管理身份执行 `deliveryctl bootstrap-trust` 和 `deliveryctl init`。把 init 返回 revision 设为 expected head 并立即验证；不得自动生成、存放或替换 trust material。
 4. 检测到旧存储时，只允许在用户明确授权、提供唯一 migration ID/operation ID 和签名身份后执行一次 `deliveryctl migrate-specflow` 或 `deliveryctl migrate-delivery`。迁移后把返回 revision 设为 expected head 并立即验证；不得继续读写旧记录。
 5. 除上述三种分支外均返回 `BLOCKED`。任何分支未得到已验证 expected head 时不得探测或写入 provider。
-6. 按 [spec-tool-integration.md](references/spec-tool-integration.md) 严格探测 provider，并用 `provider_profile_observed` 签名登记 schema 规定的 profile 字段。探测不唯一或非原生时停止。
+6. 按 [spec-tool-integration.md](references/spec-tool-integration.md) 严格探测 provider，并由独立 spec-integrator 调用 `deliveryctl observe-provider` 登记 profile 和 provider-backed artifact；不得手工构造 `provider_profile_observed` 或 provider authority。探测不唯一或非原生时停止。
 7. 调用 `$index-design-docs` 建立带 typed trace graph 的需求基线；阻断高影响冲突和缺失决策。
 8. 调用 `$write-verifiable-spec` 修订 provider 原生 spec、design/plan 和 tasks，并由不同授权身份签名批准。
 9. 每次只把一个依赖满足且已批准的任务交给 `$implement-spec-task`。实现者必须先取得签名 claim。
 10. 用不同身份调用 `$audit-spec-conformance`。审计者必须取得任务 claim；只有 subject、run、attempt、scope、environment 和 target commit 全部匹配的 audit/evidence typed gate refs 才能推进到 `accepted`。
-11. 每次提交都使用上一步返回的 revision 作为下一步 expected head，并立即复验。revision 冲突时停止并让调用方重新确认，不得自动重试。
+11. 每次提交都使用上一步返回的 revision 作为下一步 expected head，并立即执行 `validate` 和 `status`。revision 冲突时停止并让调用方重新确认，不得自动重试。
 
 ## 角色隔离
 

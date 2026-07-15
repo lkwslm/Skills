@@ -836,6 +836,7 @@ software-development/
    │     │  ├─ reducer.py
    │     │  ├─ gates.py
    │     │  ├─ permissions.py
+   │     │  ├─ provider.py
    │     │  ├─ service.py
    │     │  ├─ traceability.py
    │     │  └─ transaction.py
@@ -974,8 +975,8 @@ Trust root 和私钥必须位于仓库之外。仓库内自声明的 key、polic
 所有变更必须执行同一协议：
 
 1. 用外部 trust root 和调用方给定的 expected head 验证；
-2. 生成完整 operation batch 和所需 content-addressed blobs；
-3. 调用 `deliveryctl commit --expected-revision <expected-head>`，由具备相应 capability 的身份签名；
+2. 生成完整 operation batch 和所需 content-addressed blobs；provider detector 输出必须交给 `deliveryctl observe-provider` 确定性生成该 batch，不得手工转换；
+3. 调用 `deliveryctl commit --expected-revision <expected-head>`；provider observation 调用 `deliveryctl observe-provider --expected-revision <expected-head>`，由具备相应 capability 的身份签名；
 4. 保存返回的新 revision；
 5. 用该 revision 立即再次执行 `validate`。
 

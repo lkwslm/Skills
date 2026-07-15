@@ -18,12 +18,12 @@ description: 通过外部信任根、Ed25519 签名、append-only 事件链、HE
 1. 新 ledger 先在仓库外运行 `deliveryctl.py bootstrap-trust`；用 `generate-key` 为各职责创建独立 actor key，审查最小权限 trust policy，再运行 `init`。不要把私钥提交到仓库。
 2. 发现旧数据时只运行一次显式 `migrate-specflow` 或 `migrate-delivery`。迁移归档旧 sidecar；旧 unsigned 审批不获得授权，必须重新签署。其他命令遇到旧数据直接失败。
 3. 用 schema version `1.0` 的 operation 数组调用 `commit`。每次提交显式给出外部 `--expected-revision`、actor、Ed25519 key、event ID、UTC 时间和全部 `URI=checkout` authority 映射。
-4. artifact 注册或 supersede 时只用 full Git commit、provider native ID + pinned Git commit，或同 generation 发布的 content-addressed blob。CLI 从 authority 重取正文并计算 typed SHA-256；不接收 working tree 或未 pin remote。
+4. Provider detector 输出只通过 `observe-provider` 登记。命令确定性生成 profile 和 artifact register/supersede/deprecate batch，并核对 mapping 中的 hash 与 canonicalization；不要手工构造 provider authority。其他 artifact 注册或 supersede 只用 full Git commit 或同 generation 发布的 content-addressed blob。CLI 从 authority 重取正文并计算 typed SHA-256；不接收 working tree 或未 pin remote。
 5. approval、evidence、audit 和 transition 引用 exact ID/version/digest、event、run/attempt、scope/environment 与 target commit。claim 使用 lease token 和递增 fencing token；过期先显式记录，再重新领取。
 6. 写业务代码前后运行 `authorize-diff`，用 full base/target commit 核对实际 Git diff 同时落在 signed actor scope、exact approval scope 与 active fenced claim 内；不接受调用方自报 allowed paths。
 7. 事务残留时停止普通读写：完整 prepared generation 只用 `recover --expected-revision` 验证后 roll-forward；仅在明确确认尚未 prepared 的 `.building` 残留时，使用带锁的 `discard-building --expected-revision`。
-8. 完成或 handoff 前运行 `validate --expected-head ... --repository-map ...`；它必须完整 replay 签名链、逐 generation 比较派生 view、重算 authority、校验 typed gate 和外部 head checkpoint。
+8. 每次启动、恢复和 handoff 先运行 `validate --expected-head ... --repository-map ...`，再以相同外部 checkpoint 和 pinned Git 参数运行 `status --progress-only`。只从 `status.progress` 读取 provider、provider/delivery 对齐、任务状态、依赖、blocker、active claim、ready 集合和 trace 计数；确需完整重放对象时再省略 `--progress-only`。只读调用设置 `PYTHONDONTWRITEBYTECODE=1`；不得从聊天历史补状态。
 
 ## 输出
 
-保留命令、退出码、JSON code、外部 head checkpoint、对象 ID/version/digest、run/attempt 和未满足条件。退出码：`0` 通过，`1` policy/gate/CAS/integrity 阻塞，`2` 输入或 schema 错误，`3` 强依赖、trust material 或 authority checkout 不可用。
+保留命令、退出码、JSON code、外部 head checkpoint、`status` revision/progress、对象 ID/version/digest、run/attempt 和未满足条件。退出码：`0` 通过，`1` policy/gate/CAS/integrity 阻塞，`2` 输入或 schema 错误，`3` 强依赖、trust material 或 authority checkout 不可用。

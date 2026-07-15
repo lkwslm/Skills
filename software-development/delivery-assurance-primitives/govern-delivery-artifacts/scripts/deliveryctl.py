@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import shutil
 import sys
 from datetime import datetime, timezone
@@ -22,6 +22,8 @@ try:
     from delivery_core.events import OperationError
     from delivery_core.migrations import MigrationError, archive_legacy, build_import_operation
     from delivery_core.permissions import actor_record, path_covered
+    from delivery_core.progress import build_progress
+    from delivery_core.provider import ProviderSyncError, build_provider_operations
     from delivery_core.reducer import ReducerError, apply_operations
     from delivery_core.service import ServiceError, commit, initialize, load_trust_root, replay, validate_prepared_generation
     from delivery_core.transaction import RecoveryRequired, RevisionConflict, TransactionError, recover_transaction, discard_incomplete_builds
@@ -347,6 +349,80 @@ def command_validate(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_status(args: argparse.Namespace) -> int:
+    result = replay(
+        args.root, args.trust_root, Revision.parse(args.expected_head), verify_authorities=True,
+        repository_map=_repository_map(args.repository_map),
+        git_executable=args.git_executable, git_sha256=args.git_sha256,
+        git_manifest=args.git_manifest, git_manifest_sha256=args.git_manifest_sha256,
+    )
+    payload = {
+        "revision": str(result.revision),
+        "progress": build_progress(result.state),
+    }
+    if not args.progress_only:
+        payload["state"] = result.state
+    _emit(True, "STATUS", **payload)
+    return 0
+
+
+def command_observe_provider(args: argparse.Namespace) -> int:
+    raw = _json_file(args.profile)
+    if isinstance(raw, dict) and "ok" in raw:
+        if raw.get("ok") is not True or not isinstance(raw.get("profile"), dict):
+            raise CliInputError("detector output does not contain a successful provider profile")
+        observed = raw["profile"]
+    else:
+        raise CliInputError("provider profile must be successful detector JSON output")
+    expected = Revision.parse(args.expected_revision)
+    repository_map = _repository_map(args.repository_map)
+    head = str(run_trusted_git(
+        args.root, args.git_executable, args.git_sha256, "rev-parse", "HEAD",
+        manifest_path=args.git_manifest, manifest_sha256=args.git_manifest_sha256,
+    )).strip()
+    if head != args.commit:
+        raise ServiceError("provider observation commit must equal the checkout HEAD")
+    artifact_root = observed.get("artifact_root")
+    if not isinstance(artifact_root, str) or not artifact_root:
+        raise ProviderSyncError("provider observation lacks an artifact root")
+    root_path = PurePosixPath(artifact_root)
+    if root_path.is_absolute() or any(part in {"", ".", ".."} for part in root_path.parts):
+        raise ProviderSyncError("provider artifact root is unsafe")
+    provider_changes = str(run_trusted_git(
+        args.root, args.git_executable, args.git_sha256, "status", "--porcelain=v1",
+        "--untracked-files=all", "--", artifact_root,
+        manifest_path=args.git_manifest, manifest_sha256=args.git_manifest_sha256,
+    )).strip()
+    if provider_changes:
+        raise ServiceError(f"provider artifact root differs from the pinned checkout HEAD: {provider_changes}")
+    current = replay(
+        args.root, args.trust_root, expected, verify_authorities=True,
+        repository_map=repository_map, git_executable=args.git_executable,
+        git_sha256=args.git_sha256, git_manifest=args.git_manifest,
+        git_manifest_sha256=args.git_manifest_sha256,
+    )
+    operations, observation, counts = build_provider_operations(
+        current.state, observed, repository_uri=args.repository_uri, commit=args.commit,
+        at=args.at, operation_id_prefix=args.operation_id_prefix,
+    )
+    if not operations:
+        _emit(True, "PROVIDER_UNCHANGED", revision=str(current.revision), **counts)
+        return 0
+    blobs = {}
+    if observation is not None:
+        digest = digest_bytes(observation, "raw-v1")["value"]
+        blobs[digest] = observation
+    revision = commit(
+        args.root, args.trust_root, expected, operations, args.signing_key,
+        actor_id=args.actor_id, event_id=args.event_id, at=args.at, blobs=blobs,
+        repository_map=repository_map, git_executable=args.git_executable,
+        git_sha256=args.git_sha256, git_manifest=args.git_manifest,
+        git_manifest_sha256=args.git_manifest_sha256,
+    )
+    _emit(True, "PROVIDER_OBSERVED", revision=str(revision), **counts)
+    return 0
+
+
 def command_recover(args: argparse.Namespace) -> int:
     expected = Revision.parse(args.expected_revision)
     result = replay(args.root, args.trust_root, expected, allow_recovery=True)
@@ -640,6 +716,29 @@ def parser() -> argparse.ArgumentParser:
     validate.add_argument("--repository-map", action="append", default=[])
     add_git_runtime(validate)
     validate.set_defaults(handler=command_validate)
+    status = commands.add_parser("status", help="replay and return the verified resumable delivery state")
+    status.add_argument("--root", required=True, type=Path)
+    status.add_argument("--trust-root", required=True, type=Path)
+    status.add_argument("--expected-head", required=True)
+    status.add_argument("--progress-only", action="store_true")
+    status.add_argument("--repository-map", action="append", default=[])
+    add_git_runtime(status)
+    status.set_defaults(handler=command_status)
+    observe = commands.add_parser("observe-provider", help="sign one detector profile and reconcile its native artifacts")
+    observe.add_argument("--root", required=True, type=Path)
+    observe.add_argument("--trust-root", required=True, type=Path)
+    observe.add_argument("--expected-revision", required=True)
+    observe.add_argument("--actor-id", required=True)
+    observe.add_argument("--signing-key", required=True, type=Path)
+    observe.add_argument("--event-id", required=True)
+    observe.add_argument("--operation-id-prefix", required=True)
+    observe.add_argument("--at", required=True)
+    observe.add_argument("--profile", required=True, type=Path)
+    observe.add_argument("--repository-uri", required=True)
+    observe.add_argument("--commit", required=True)
+    observe.add_argument("--repository-map", action="append", required=True)
+    add_git_runtime(observe, required=True)
+    observe.set_defaults(handler=command_observe_provider)
     recover = commands.add_parser("recover", help="explicitly roll one complete prepared generation forward")
     recover.add_argument("--root", required=True, type=Path)
     recover.add_argument("--trust-root", required=True, type=Path)
@@ -684,7 +783,7 @@ def main() -> int:
     args = parser().parse_args()
     try:
         return args.handler(args)
-    except (CliInputError, MigrationError, OperationError, json.JSONDecodeError) as exc:
+    except (CliInputError, MigrationError, OperationError, ProviderSyncError, json.JSONDecodeError) as exc:
         _emit(False, "INPUT_INVALID", errors=[str(exc)])
         return 2
     except (FileNotFoundError, OSError) as exc:

@@ -144,6 +144,23 @@ def verify_digest(data: bytes, expected: Mapping[str, Any]) -> None:
         raise AuthorityError(f"authority digest mismatch: expected {expected['value']}, got {actual['value']}")
 
 
+def _select_provider_content(data: bytes, selector: Mapping[str, Any]) -> bytes:
+    if set(selector) != {"kind", "task_id"} or selector.get("kind") != "openspec-task-v1":
+        raise AuthorityError("provider content selector is unsupported")
+    task_id = selector.get("task_id")
+    if not isinstance(task_id, str) or not task_id:
+        raise AuthorityError("provider task selector requires a task ID")
+    try:
+        text = unicodedata.normalize("NFC", data.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n"))
+    except UnicodeDecodeError as exc:
+        raise AuthorityError("openspec-task-v1 requires UTF-8 input") from exc
+    pattern = re.compile(r"^- \[([ xX])\] ([A-Za-z0-9][A-Za-z0-9._-]*)\s+(.+?)\s*$")
+    matches = [match for line in text.splitlines() if (match := pattern.fullmatch(line)) and match.group(2) == task_id]
+    if len(matches) != 1:
+        raise AuthorityError(f"provider task selector must resolve exactly once: {task_id}")
+    return f"- [ ] {task_id} {matches[0].group(3)}\n".encode("utf-8")
+
+
 def _safe_git_path(raw: Any) -> str:
     if not isinstance(raw, str) or not raw or "\\" in raw or any(ord(character) < 32 or ord(character) == 127 for character in raw):
         raise AuthorityError("authority path must be a non-empty POSIX relative path")
@@ -262,7 +279,10 @@ def run_trusted_git(
 
         def drain(stream: Any, buffer: bytearray) -> None:
             while True:
-                chunk = stream.read(64 * 1024)
+                try:
+                    chunk = stream.read(64 * 1024)
+                except (OSError, ValueError):
+                    return
                 if not chunk:
                     return
                 if len(buffer) + len(chunk) > MAX_AUTHORITY_OUTPUT_BYTES:
@@ -304,6 +324,7 @@ def run_trusted_git(
             process.stdout.close(); process.stderr.close()
             raise AuthorityError("trusted Git left descendant processes holding output pipes")
         if job_handle: ctypes.windll.kernel32.CloseHandle(job_handle)
+        process.stdout.close(); process.stderr.close()
         if exceeded.is_set():
             raise AuthorityError("trusted Git output exceeds the 50 MiB limit")
         result_code = process.returncode
@@ -441,6 +462,24 @@ def resolve_and_verify(
     expected_digest: Mapping[str, Any],
     **kwargs: Any,
 ) -> bytes:
+    if authority.get("kind") == "provider":
+        profiles = kwargs.get("provider_profiles") or {}
+        profile = profiles.get(f"{authority.get('profile_id')}@{authority.get('profile_version')}")
+        record = profile.get("record") if isinstance(profile, Mapping) else None
+        mapping = record.get("id_mapping", {}).get(authority.get("native_id")) if isinstance(record, Mapping) else None
+        if not isinstance(mapping, Mapping):
+            raise AuthorityError("provider native ID is absent from the pinned profile")
+        if (
+            mapping.get("content_hash") != expected_digest.get("value")
+            or mapping.get("content_canonicalization", "raw-v1") != expected_digest.get("canonicalization")
+        ):
+            raise AuthorityError("provider artifact digest differs from the pinned native mapping")
     data = resolve_authority(authority, **kwargs)
+    if authority.get("kind") == "provider" and isinstance(mapping, Mapping):
+        selector = mapping.get("content_selector")
+        if selector is not None:
+            if not isinstance(selector, Mapping):
+                raise AuthorityError("provider content selector must be an object")
+            data = _select_provider_content(data, selector)
     verify_digest(data, expected_digest)
     return data
