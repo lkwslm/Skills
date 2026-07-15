@@ -45,6 +45,8 @@
 
 安装时保持每个 Skill 目录名不变，并避免覆盖同名目录中的本地修改。重新启动或刷新 Codex 会话后，通过 `$skill-name` 调用。
 
+Windows checkout 需要让 Git 支持长路径（例如 `git config --global core.longpaths true`），或把仓库放在较短的根目录；签名 generation 与 content-addressed blob 的文件名不能截断或改写。
+
 ## 推荐使用方式
 
 ### 新系统整体实现
