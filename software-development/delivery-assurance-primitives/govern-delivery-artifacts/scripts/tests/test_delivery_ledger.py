@@ -42,13 +42,11 @@ _GIT_RUNTIME_TEMP = tempfile.TemporaryDirectory()
 GIT_ROOT = Path(_GIT_RUNTIME_TEMP.name)
 if os.name == "nt" and GIT_SOURCE.parent.name.lower() == "cmd":
     source_root = GIT_SOURCE.parent.parent
-    (GIT_ROOT / "cmd").mkdir()
-    (GIT_ROOT / "mingw64" / "bin").mkdir(parents=True)
-    shutil.copy2(GIT_SOURCE, GIT_ROOT / "cmd" / GIT_SOURCE.name)
-    shutil.copy2(source_root / "mingw64" / "bin" / "git.exe", GIT_ROOT / "mingw64" / "bin" / "git.exe")
+    git_core = (source_root / "mingw64" / "libexec" / "git-core" / "git.exe").resolve(strict=True)
+    shutil.copy2(git_core, GIT_ROOT / "git.exe")
     for dependency in (source_root / "mingw64" / "bin").glob("*.dll"):
-        shutil.copy2(dependency, GIT_ROOT / "mingw64" / "bin" / dependency.name)
-    GIT = GIT_ROOT / "cmd" / GIT_SOURCE.name
+        shutil.copy2(dependency, GIT_ROOT / dependency.name)
+    GIT = GIT_ROOT / "git.exe"
 else:
     shutil.copy2(GIT_SOURCE, GIT_ROOT / GIT_SOURCE.name)
     for dependency in GIT_SOURCE.parent.glob("*.dll"):
