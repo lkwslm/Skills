@@ -40,7 +40,7 @@ from test_detect_spec_tool import (  # noqa: E402
 GIT_SOURCE = Path(shutil.which("git") or "").resolve(strict=True)
 _GIT_RUNTIME_TEMP = tempfile.TemporaryDirectory()
 GIT_ROOT = Path(_GIT_RUNTIME_TEMP.name)
-if os.name == "nt" and GIT_SOURCE.parent.name.lower() == "cmd":
+if os.name == "nt" and GIT_SOURCE.parent.name.lower() in {"bin", "cmd"}:
     source_root = GIT_SOURCE.parent.parent
     git_core = (source_root / "mingw64" / "libexec" / "git-core" / "git.exe").resolve(strict=True)
     shutil.copy2(git_core, GIT_ROOT / "git.exe")
