@@ -11,7 +11,7 @@ description: 编排从已批准系统设计到分层上下文、冻结契约、�
 
 ## 启动读取
 
-读取项目指令、仓库状态、设计入口、`.delivery/`、现有 Spec 工件、[工件协议](../../delivery-assurance-primitives/govern-delivery-artifacts/references/artifact-protocol.md)、[状态机](../../delivery-assurance-primitives/govern-delivery-artifacts/references/state-machines.md)和[权限模型](../../delivery-assurance-primitives/govern-delivery-artifacts/references/permission-model.md)。恢复时先运行陈旧检查。
+读取项目指令、仓库状态、设计入口、外部 trust root/expected head、现有 Spec 工件、[工件协议](../../delivery-assurance-primitives/govern-delivery-artifacts/references/artifact-protocol.md)、[状态机](../../delivery-assurance-primitives/govern-delivery-artifacts/references/state-machines.md)和[权限模型](../../delivery-assurance-primitives/govern-delivery-artifacts/references/permission-model.md)。恢复时先运行 `deliveryctl validate` 完整 replay 和 authority re-hash。
 
 ## 前置门禁
 

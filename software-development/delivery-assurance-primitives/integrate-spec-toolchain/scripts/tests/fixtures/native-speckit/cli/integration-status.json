@@ -1,0 +1,9 @@
+{
+  "status": "ok",
+  "default_integration": "codex",
+  "installed_integrations": ["codex"],
+  "multi_install_safe": true,
+  "missing_files": [],
+  "modified_files": [],
+  "invalid_manifest_paths": []
+}

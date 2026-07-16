@@ -24,12 +24,12 @@ description: 编写生产变更的当前、目标和保持不变行为，以及�
 3. 定义数据/配置迁移顺序、可逆点、回滚或不可逆后的 roll-forward/恢复方案。
 4. 定义 feature flag/灰度、业务技术指标、阈值、观察窗、停止与恢复条件。
 5. 将变化拆成可独立验证、可安全部署的任务，记录允许写范围和验证命令。
-6. 为每个任务生成具有独立 ID/version/hash 的 Brownfield context package，登记来源、依赖、允许读写范围和 artifact registry 关系；不得与 task 复用身份。
+6. 为每个任务生成具有独立 ID/version/typed digest 的 Brownfield context package，准备绑定来源、依赖和允许读写范围的 typed operations，并只通过 `deliveryctl commit` 登记；不得与 task 复用身份。
 7. 更新追溯图并交不同角色评审；作者不得批准。
 
 ## 写入权限
 
-只写批准前的权威 Delta Spec、原生 tasks、任务 context packages、测试/迁移/观测计划、registry 关系和追溯；不得写实现、审批或发布状态。
+只写批准前的权威 Delta Spec、原生 tasks、任务 context packages、测试/迁移/观测计划；registry 与追溯只准备 typed operations 并交给 `deliveryctl commit`。不得写实现、审批或发布状态。
 
 ## 输出与状态
 

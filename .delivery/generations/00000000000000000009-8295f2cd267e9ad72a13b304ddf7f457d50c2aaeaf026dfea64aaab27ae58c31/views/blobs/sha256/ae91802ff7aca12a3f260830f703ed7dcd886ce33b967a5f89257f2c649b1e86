@@ -1,0 +1,1 @@
+PASS: 47 delivery governance tests; 20 provider detector tests; 5 repository tests; 21 Skill validations; official OpenSpec strict validation; Python compile; YAML parse; git diff check; fresh-process and independent-agent recovery.

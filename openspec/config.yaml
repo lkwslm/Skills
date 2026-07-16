@@ -1,0 +1,14 @@
+schema: spec-driven
+
+context: |
+  This repository contains Codex Skills and Python 3.9 delivery-governance tools.
+  software-development/SYSTEM-DELIVERY-SKILL-SUITES.md is the architecture source.
+  All durable delivery progress is recorded by the signed .delivery ledger.
+  Provider artifacts are observed only through detector -> deliveryctl observe-provider.
+
+rules:
+  proposal:
+    - Name the design source and the delivery-governance boundary.
+  tasks:
+    - Each task must have an observable verification command.
+    - Separate implementation, self-host pilot, and publication work.

@@ -24,7 +24,7 @@ description: 把系统基线、领域上下文和冻结契约转化为端到端�
 3. 对安全、性能、容量、恢复和可观测性给出量化判据或不适用理由。
 4. 引用契约 ID/version/hash，禁止复制契约正文或引入未冻结语义。
 5. 创建 `TEST-*` 与可独立验证的 `TASK-*`，记录依赖、允许/禁止写入和完成命令。
-6. 生成具有独立 ID/version/hash 的 L2 context package：L0、相关 L1、当前切片、直接依赖和批准写范围；将其作为 `context-package` 登记到 artifact registry，不与 task 复用身份。
+6. 生成具有独立 ID/version/typed digest 的 L2 context package：L0、相关 L1、当前切片、直接依赖和批准写范围；只通过 `deliveryctl commit` 将其登记为 `context-package`，不与 task 复用身份。
 7. 更新追溯边并提交不同角色评审；通过后只到 `draft/reviewed`，等待批准。
 
 ## 写入权限

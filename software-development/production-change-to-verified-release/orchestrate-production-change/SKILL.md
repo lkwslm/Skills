@@ -11,7 +11,7 @@ description: 编排从生产变更意图到现状发现、影响分析、Delta S
 
 ## 启动读取
 
-读取项目指令、仓库与目标 commit、变更意图、环境约束、`.delivery/`、Spec 工件、[工件协议](../../delivery-assurance-primitives/govern-delivery-artifacts/references/artifact-protocol.md)、[状态机](../../delivery-assurance-primitives/govern-delivery-artifacts/references/state-machines.md)和[权限模型](../../delivery-assurance-primitives/govern-delivery-artifacts/references/permission-model.md)。恢复时先检查陈旧。
+读取项目指令、仓库与目标 commit、变更意图、环境约束、外部 trust root/expected head、Spec 工件、[工件协议](../../delivery-assurance-primitives/govern-delivery-artifacts/references/artifact-protocol.md)、[状态机](../../delivery-assurance-primitives/govern-delivery-artifacts/references/state-machines.md)和[权限模型](../../delivery-assurance-primitives/govern-delivery-artifacts/references/permission-model.md)。恢复时先运行 `deliveryctl validate` 完整 replay 和 authority re-hash。
 
 ## 前置门禁
 

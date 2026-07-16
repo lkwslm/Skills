@@ -1,0 +1,7 @@
+{
+  "run_id": "run-001",
+  "workflow_id": "speckit",
+  "status": "paused",
+  "current_step_id": "review-spec",
+  "current_step_index": 1
+}

@@ -28,7 +28,7 @@ description: 将系统级设计、领域文档、ADR 和非功能要求建立为
 
 ## 写入权限
 
-只写 manifest、基线、术语、不变量、来源覆盖、开放问题及 registry 记录；不得写 Spec、tasks、实现、审批或最终状态。
+只写 manifest、基线、术语、不变量、来源覆盖和开放问题；registry 只准备 typed operations 并交给 `deliveryctl commit`。不得写 Spec、tasks、实现、审批或最终状态。
 
 ## 输出与状态
 

@@ -11,7 +11,7 @@ description: 独立验证新系统需求、契约、实现、测试、跨领域�
 
 ## 启动读取
 
-读取原始设计定位、基线、L0/L1/L2、批准 Spec、frozen contracts、diff、原始运行结果、[追溯 schema](../../delivery-assurance-primitives/govern-delivery-artifacts/assets/traceability.schema.json)和[证据协议](../../delivery-assurance-primitives/govern-delivery-artifacts/references/evidence-protocol.md)。
+读取原始设计定位、基线、L0/L1/L2、批准 Spec、frozen contracts、diff、原始运行结果、共享唯一 schema 源 [`events.py`](../../delivery-assurance-primitives/govern-delivery-artifacts/scripts/delivery_core/events.py) 和[证据协议](../../delivery-assurance-primitives/govern-delivery-artifacts/references/evidence-protocol.md)。
 
 ## 前置门禁
 

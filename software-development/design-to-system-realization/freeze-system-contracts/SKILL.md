@@ -22,7 +22,7 @@ description: 定义并版本化冻结当前 integration epoch 的跨模块接口
 1. 为接口、事件和共享数据定义 schema、版本、错误、幂等、顺序、超时、重试与兼容策略。
 2. 登记 owner、消费者、依赖版本、兼容窗口和退役条件。
 3. 生成 provider/consumer 契约测试骨架并关联 `TEST-*`。
-4. 独立评审后运行共享 `check_contract.py <contract> --approvals <approvals> --registry <registry> --json`，确认审批绑定当前 ID/version/hash 并覆盖全部消费者，再按 `draft → reviewed → frozen` 推进当前 epoch 版本。
+4. 独立评审后用 `deliveryctl commit` 记录绑定当前 contract ID/version/digest、run/attempt、范围、环境和消费者的 signed approval 与 audit，再提交 `reviewed → frozen` typed transition；随后以外部 expected head 运行 `deliveryctl validate`。
 5. 变化时创建 Contract Change 和新版本，执行消费者兼容检查并传播 `stale`；不得覆盖 frozen 版本。
 
 ## 写入权限

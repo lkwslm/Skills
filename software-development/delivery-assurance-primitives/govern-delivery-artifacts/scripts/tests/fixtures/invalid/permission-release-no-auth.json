@@ -1,1 +1,0 @@
-{"role":"release-controller","allowed_paths":["production"],"writes":[{"path":"production/service","artifact_type":"environment"}]}

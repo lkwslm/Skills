@@ -1,45 +1,29 @@
 ---
 name: govern-delivery-artifacts
-description: 管理两套交付 Suite 的 artifact registry、层级状态、追溯、审批、权限、陈旧传播和证据协议，并运行确定性门禁。用于初始化、验证、恢复或审计 `.delivery/` 治理工件时。
+description: 通过外部信任根、Ed25519 签名、append-only 事件链、HEAD CAS、typed gate 和 pinned authority 管理或审计 `.delivery/`。用于初始化、迁移、提交、恢复、验证交付治理数据，或记录 artifact、审批、run/attempt、claim、evidence、audit、traceability 与状态转换时。
 ---
 
 # 治理交付工件
 
-## 核心边界
+## 边界
 
-只管理 `.delivery/` sidecar 和确定性门禁，不复制外部 Spec 正文，不写业务代码，不代替语义审查或人工审批。已有 `.specflow/` 只读兼容，迁移需另行批准。
+只通过 `scripts/deliveryctl.py` 读写 `.delivery/`。不直接编辑 ledger、HEAD、generation 或派生 view，不接受 unsigned JSON、调用方自报角色/权限/hash/门禁结果，不复制外部 Spec 正文。外部 trust root、私钥和 expected head 是必需输入；trust root 与私钥必须是仓库外的真实文件，拒绝 symlink/reparse。任何 Git authority 还必须显式提供绝对 `--git-executable`、`--git-sha256`、`--git-manifest` 与 `--git-manifest-sha256`；manifest 必须完整覆盖实际 Git、DLL 与 libexec 运行时树，服务会逐次复验并禁用 replace refs。
 
-## 启动读取
+## 启动
 
-读取项目指令、`.delivery/`、[工件协议](references/artifact-protocol.md)、[状态机](references/state-machines.md)、[权限模型](references/permission-model.md)和[证据协议](references/evidence-protocol.md)。
+读取项目指令和 [工件协议](references/artifact-protocol.md)、[状态机](references/state-machines.md)、[权限模型](references/permission-model.md)、[证据协议](references/evidence-protocol.md)。安装 `scripts/requirements.txt` 的强依赖；依赖缺失时停止。
 
-## 前置门禁
+## 流程
 
-确认目标仓库、run ID、Suite 类型、目标 commit 和实际 capability。初始化只创建 `.delivery/`，不得初始化外部工具或改业务仓库内容。
+1. 新 ledger 先在仓库外运行 `deliveryctl.py bootstrap-trust`；用 `generate-key` 为各职责创建独立 actor key，审查最小权限 trust policy，再运行 `init`。不要把私钥提交到仓库。
+2. 发现旧数据时只运行一次显式 `migrate-specflow` 或 `migrate-delivery`。迁移归档旧 sidecar；旧 unsigned 审批不获得授权，必须重新签署。其他命令遇到旧数据直接失败。
+3. 用 schema version `1.0` 的 operation 数组调用 `commit`。每次提交显式给出外部 `--expected-revision`、actor、Ed25519 key、event ID、UTC 时间和全部 `URI=checkout` authority 映射。
+4. Provider detector 输出只通过 `observe-provider` 登记。命令确定性生成 profile 和 artifact register/supersede/deprecate batch，并核对 mapping 中的 hash 与 canonicalization；不要手工构造 provider authority。其他 artifact 注册或 supersede 只用 full Git commit 或同 generation 发布的 content-addressed blob。CLI 从 authority 重取正文并计算 typed SHA-256；不接收 working tree 或未 pin remote。
+5. approval、evidence、audit 和 transition 引用 exact ID/version/digest、event、run/attempt、scope/environment 与 target commit。claim 使用 lease token 和递增 fencing token；过期先显式记录，再重新领取。
+6. 写业务代码前后运行 `authorize-diff`，用 full base/target commit 核对实际 Git diff 同时落在 signed actor scope、exact approval scope 与 active fenced claim 内；不接受调用方自报 allowed paths。
+7. 事务残留时停止普通读写：完整 prepared generation 只用 `recover --expected-revision` 验证后 roll-forward；仅在明确确认尚未 prepared 的 `.building` 残留时，使用带锁的 `discard-building --expected-revision`。
+8. 每次启动、恢复和 handoff 先运行 `validate --expected-head ... --repository-map ...`，再以相同外部 checkpoint 和 pinned Git 参数运行 `status --progress-only`。只从 `status.progress` 读取 provider、provider/delivery 对齐、任务状态、依赖、blocker、active claim、ready 集合和 trace 计数；确需完整重放对象时再省略 `--progress-only`。只读调用设置 `PYTHONDONTWRITEBYTECODE=1`；不得从聊天历史补状态。
 
-## 执行流程
+## 输出
 
-1. 用 `assets/*.schema.json` 创建或验证 registry、state、traceability、approvals、context packages 和 evidence；fallback 或导出的 Spec 另运行 `scripts/validate_spec_structure.py`。
-2. 运行 `scripts/validate_delivery_artifacts.py --root <repo> --json` 验证完整目录、跨工件身份、registry 派生关系和连续状态历史；只有 `PASS` 门禁才能推进正常生命周期状态。
-3. 运行 `scripts/check_delivery_traceability.py <traceability> --approvals <approvals> --registry <registry> --json` 检查 Suite 的必需关系闭包；不得通过空 `required_paths` 或调用方自定义捷径缩小完成条件。
-4. 上游变化时运行 `scripts/check_delivery_staleness.py <registry> --traceability <traceability> --changed <ID@VERSION=HASH> --write --json` 标记下游 stale 闭包并输出最小复验范围。
-5. 写入前运行 `scripts/check_delivery_permissions.py <manifest> --approvals <approvals> --registry <registry> --json`；环境写入必须解析到对象 ID/version/hash、范围和有效期一致的治理审批。代码变化后运行 `scripts/check_authorized_diff.py --repo <repo> --base <approved-tree> --allowed-path <scope> --json` 核对真实 diff。
-6. 冻结或演进接口前运行 `scripts/check_contract.py <contract> --approvals <approvals> --registry <registry> --json`，确认审批绑定当前契约内容 hash 并覆盖全部消费者。
-7. 完成声明前运行 `scripts/verify_delivery_evidence.py`，复核时间、目标 commit、工件、原始日志 hash 和未验证项；存在未验证项时不得通过完成门禁。
-8. 保留历史版本、attempt、原始日志索引和每次状态转换；不得覆盖批准历史。
-
-## 写入权限
-
-只写治理目录中与当前角色匹配的 registry、状态、追溯、批准索引、上下文 manifest、证据索引、审计和 runs。批准正文只能由人工批准者写。
-
-## 输出与状态
-
-输出每项门禁的机器可读 `PASS`、`FAIL` 或 `BLOCKED`、退出码和具体缺口。生命周期状态使用小写，审批决策使用大写；不得混用三类术语。脚本退出码：`0` 通过、`1` 有效输入但门禁未满足、`2` 格式或参数错误、`3` 环境或依赖不可用。
-
-## 失败、阻塞与陈旧
-
-格式错误不推进状态；门禁失败 fail closed。hash 变化只传播 `stale`，不删除旧证据；清除 stale 必须引用新版本证据。
-
-## Handoff 与完成证据
-
-提供命令、退出码、JSON 结果、校验对象/version/hash、失败路径和未验证项。自然语言总结不能替代脚本结果。
+保留命令、退出码、JSON code、外部 head checkpoint、`status` revision/progress、对象 ID/version/digest、run/attempt 和未满足条件。退出码：`0` 通过，`1` policy/gate/CAS/integrity 阻塞，`2` 输入或 schema 错误，`3` 强依赖、trust material 或 authority checkout 不可用。

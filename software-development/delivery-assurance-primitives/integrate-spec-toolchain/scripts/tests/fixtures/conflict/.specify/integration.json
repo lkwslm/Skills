@@ -1,0 +1,6 @@
+{
+  "default_integration": "codex",
+  "installed_integrations": ["codex"],
+  "integration_settings": {},
+  "integration_state_schema": "1"
+}

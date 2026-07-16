@@ -2,17 +2,107 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "spec-tool-profile.schema.json",
   "type": "object",
-  "required": ["profile_id", "profile_hash", "provider", "mode", "version", "version_source", "artifact_root", "authorities", "id_mapping", "capabilities", "missing_controls", "command_entrypoints", "configuration", "extensions", "runtime", "adoption_options", "next_actions", "trust", "candidates"],
+  "required": [
+    "schema_version", "profile_id", "profile_hash", "provider", "mode",
+    "adapter_version", "version", "version_source", "artifact_root",
+    "configuration", "authorities", "id_mapping", "capabilities",
+    "command_entrypoints", "runtime", "observations", "trust"
+  ],
   "additionalProperties": false,
   "properties": {
-    "profile_id": {"type": "string", "minLength": 1}, "profile_hash": {"type": "string", "minLength": 64},
-    "provider": {"type": "string", "enum": ["spec-kit", "openspec", "kiro", "other", "fallback", "conflict"]}, "mode": {"type": "string", "enum": ["native", "adopt", "bridge", "fallback", "blocked"]}, "version": {"type": ["string", "null"]}, "version_source": {"type": ["string", "null"]}, "artifact_root": {"type": ["string", "null"]},
-    "authorities": {"type": "object", "additionalProperties": {"type": "object", "required": ["uri", "writer"], "additionalProperties": false, "properties": {"uri": {"type": "string", "minLength": 1}, "writer": {"type": "string", "minLength": 1}}}},
-    "id_mapping": {"type": "object"}, "capabilities": {"type": "array", "items": {"type": "string"}}, "missing_controls": {"type": "array", "items": {"type": "string"}}, "command_entrypoints": {"type": "object", "additionalProperties": {"type": "string"}}, "configuration": {"type": ["string", "null"]}, "extensions": {"type": "array", "items": {"type": "string"}},
-    "runtime": {"type": ["object", "null"], "additionalProperties": false, "required": ["executable", "resolved_path", "version_args", "expected_version", "observed_version", "declared_installation_source"], "properties": {"executable": {"type": ["string", "null"]}, "resolved_path": {"type": ["string", "null"]}, "version_args": {"type": ["array", "null"], "items": {"type": "string"}}, "expected_version": {"type": ["string", "null"]}, "observed_version": {"type": ["string", "null"]}, "declared_installation_source": {"type": ["string", "null"]}}},
-    "adoption_options": {"type": "array", "items": {"type": "string", "enum": ["spec-kit", "openspec", "kiro"]}, "uniqueItems": true},
-    "next_actions": {"type": "array", "items": {"type": "object", "required": ["action", "authorization_required"], "additionalProperties": false, "properties": {"action": {"type": "string", "minLength": 1}, "authorization_required": {"type": "array", "items": {"type": "string", "enum": ["installation", "initialization", "upgrade", "migration"]}, "uniqueItems": true}}}},
-    "trust": {"type": "object", "required": ["level", "reasons"], "additionalProperties": false, "properties": {"level": {"type": "string", "enum": ["trusted", "review-required", "blocked"]}, "reasons": {"type": "array", "items": {"type": "string"}}}},
-    "candidates": {"type": "array", "items": {"type": "string"}}
-  }
+    "schema_version": {"type": "string", "const": "1.0"},
+    "profile_id": {"type": "string", "pattern": "^PROFILE-(openspec|spec-kit)$"},
+    "profile_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "provider": {"type": "string", "enum": ["openspec", "spec-kit"]},
+    "mode": {"const": "native"},
+    "adapter_version": {"type": "string", "minLength": 1},
+    "version": {"type": ["string", "null"]},
+    "version_source": {"type": ["string", "null"]},
+    "artifact_root": {"type": ["string", "null"]},
+    "configuration": {"type": ["string", "null"]},
+    "authorities": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["uri", "writer"],
+        "additionalProperties": false,
+        "properties": {
+          "uri": {"type": "string", "minLength": 1},
+          "writer": {"type": "string", "enum": ["openspec", "spec-kit"]}
+        }
+      }
+    },
+    "id_mapping": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["delivery_id", "native_id", "native_parent_id", "artifact_type", "authority_uri", "status", "content_hash"],
+        "additionalProperties": false,
+        "properties": {
+          "delivery_id": {"type": "string", "minLength": 1},
+          "native_id": {"type": "string", "minLength": 1},
+          "native_parent_id": {"type": ["string", "null"]},
+          "artifact_type": {"type": "string", "minLength": 1},
+          "authority_uri": {"type": "string", "minLength": 1},
+          "status": {"type": "string", "enum": ["active", "done", "ready", "blocked", "created", "running", "completed", "paused", "failed", "aborted"]},
+          "content_hash": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+          "content_canonicalization": {"type": "string", "enum": ["raw-v1", "utf8-nfc-lf-v1", "delivery-json-v1"]},
+          "content_selector": {
+            "type": "object",
+            "required": ["kind", "task_id"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {"const": "openspec-task-v1"},
+              "task_id": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    },
+    "capabilities": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "command_entrypoints": {"type": "object", "additionalProperties": {"type": "string", "minLength": 1}},
+    "runtime": {
+      "type": "object",
+      "required": ["executable", "resolved_path", "sha256", "version_args", "observed_version", "manifest", "manifest_sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "executable": {"type": "string", "enum": ["openspec", "specify"]},
+        "resolved_path": {"type": ["string", "null"]},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "version_args": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "observed_version": {"type": ["string", "null"]},
+        "manifest": {"type": "string", "minLength": 1},
+        "manifest_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "interpreter": {"type": "string", "minLength": 1},
+        "interpreter_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "entrypoint": {"type": "string", "minLength": 1},
+        "entrypoint_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "observations": {"type": "object", "additionalProperties": {"type": "string", "pattern": "^[a-f0-9]{64}$"}},
+    "trust": {
+      "type": "object",
+      "required": ["level", "reasons"],
+      "additionalProperties": false,
+      "properties": {
+        "level": {"const": "trusted"},
+        "reasons": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"mode": {"const": "native"}}},
+      "then": {
+        "properties": {
+          "version": {"type": "string", "minLength": 1},
+          "version_source": {"type": "string", "minLength": 1},
+          "artifact_root": {"type": "string", "minLength": 1},
+          "configuration": {"type": "string", "minLength": 1},
+          "authorities": {"minProperties": 1},
+          "observations": {"minProperties": 1}
+        }
+      }
+    }
+  ]
 }

@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "ledger_id": "LEDGER-SKILLS",
+  "repository_uri": "https://github.com/lkwslm/Skills.git",
+  "provider": "openspec",
+  "external_anchor": {
+    "base": "${CODEX_HOME:-~/.codex}/delivery/LEDGER-SKILLS",
+    "trust_root": "trust-root.json",
+    "checkpoint": "checkpoint.json",
+    "policy": "policy.json",
+    "git_executable": "git-runtime/git.exe",
+    "git_manifest": "git-runtime.json"
+  },
+  "deliveryctl": "software-development/delivery-assurance-primitives/govern-delivery-artifacts/scripts/deliveryctl.py",
+  "warning": "This descriptor is a locator only. Repository content is not a trust anchor."
+}

@@ -1,9 +1,9 @@
-# Evidence protocol
+# Run, evidence and audit protocol
 
-Evidence must contain commit/tree hash, related artifact hashes, runner, operating system, tool versions or image digest, start/end timestamps, raw log path/hash, test selector, pass/fail/skip counts, skip reasons and approvals, attempt ID, unverified items, and expiry or invalidation conditions.
+A run binds suite, full target commit, and non-empty input artifact identities. Attempts are contiguous within a run and bind the same commit plus input digests. Completion records result, UTC end time and raw log digest; raw logs are published atomically as content-addressed blobs.
 
-Store summaries separately from raw results. Never treat an agent narrative as raw evidence. A retry is a new attempt; preserve prior failures. Evidence becomes stale when its commit, related artifact, environment contract, or explicit validity condition changes.
+Evidence binds its own ID/version, exact subject ID/version/digest, run/attempt, commit, scope/environment, result and log authority. It is accepted only after that attempt completed with the same result and log digest.
 
-Completion evidence must be replayable: record exact command, exit code, artifact path and requirement/test IDs. Recompute the raw-log hash, match the delivery commit and registered artifact identities, and validate timestamp order before accepting it. A skipped mandatory check requires a non-expired `RISK_ACCEPTED` approval bound to the skipped requirement or test and its registered content hash.
+Audit records bind the same fields, policy version and input digests. Each clause has typed evidence refs. The reducer resolves exact event/record/version/digest and derives overall as `FAIL` if any clause fails, otherwise `BLOCKED` if any blocks, otherwise `PASS`. A verifier cannot self-report a contradictory overall.
 
-Require `unverified_items` to be empty at the completion-evidence gate. Resolve a legitimate exception before this gate through a versioned traceability exemption and its governed approval; do not reinterpret an unresolved item inside evidence as an implicit risk acceptance. Keep missing production authorization in the release handoff and `release_ready` state, not as an unverified implementation item.
+Retries are new attempts. Preserve failures. Expired approval, different attempt, scope, environment, object version, digest or commit cannot justify a transition.

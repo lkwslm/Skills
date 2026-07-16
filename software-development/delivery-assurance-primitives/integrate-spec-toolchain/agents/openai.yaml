@@ -1,4 +1,4 @@
 interface:
   display_name: "Integrate Spec Toolchain"
-  short_description: "Detect and map authoritative spec tooling"
-  default_prompt: "Use $integrate-spec-toolchain to detect and map this repository's spec tooling."
+  short_description: "Strictly verify OpenSpec or Spec Kit state"
+  default_prompt: "Use $integrate-spec-toolchain to verify an adopted OpenSpec or Spec Kit provider and map native IDs into the signed delivery ledger."

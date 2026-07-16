@@ -11,7 +11,7 @@ description: 独立验证生产变更的新增、修改和保持不变条款，�
 
 ## 启动读取
 
-读取行为基线、影响图、Delta Spec、保持不变清单、契约、迁移/观测计划、diff、原始 evidence、[追溯 schema](../../delivery-assurance-primitives/govern-delivery-artifacts/assets/traceability.schema.json)和权限模型。
+读取行为基线、影响图、Delta Spec、保持不变清单、契约、迁移/观测计划、diff、原始 evidence、共享唯一 schema 源 [`events.py`](../../delivery-assurance-primitives/govern-delivery-artifacts/scripts/delivery_core/events.py) 和权限模型。
 
 ## 前置门禁
 

@@ -1,0 +1,12 @@
+{
+  "changeName": "add-login",
+  "schemaName": "spec-driven",
+  "isComplete": false,
+  "applyRequires": ["tasks"],
+  "artifacts": [
+    {"id": "proposal", "outputPath": "proposal.md", "status": "done"},
+    {"id": "specs", "outputPath": "specs/**/*.md", "status": "done"},
+    {"id": "design", "outputPath": "design.md", "status": "ready"},
+    {"id": "tasks", "outputPath": "tasks.md", "status": "blocked", "missingDeps": ["design"]}
+  ]
+}

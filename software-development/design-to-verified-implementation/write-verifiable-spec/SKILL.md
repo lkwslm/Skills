@@ -1,34 +1,29 @@
 ---
 name: write-verifiable-spec
-description: 把已解决冲突的需求基线转换成可独立审查和机械验收的规格、接口契约、任务图与追溯关系。用于根据设计文档生成 spec、把模糊需求改成 Given/When/Then 条款、切分可实施任务、冻结接口或检查 spec 是否足以指导无偏差实现时。
+description: 将已解决冲突的需求基线转换为 OpenSpec 或 Spec Kit 原生的可审查规格、接口契约和任务，并把审批与追溯作为签名 typed operations 登记。用于编写或修订可机械验收的 spec、冻结接口、切分任务，或检查规格是否足以指导实现时。
 ---
 
 # 可验证规格编写
 
+执行前读取共享 [govern-delivery-artifacts](../../delivery-assurance-primitives/govern-delivery-artifacts/SKILL.md)；所有 operation、identity、authority 和 gate ref 字段严格使用其当前 schema。
+
 ## 前置门禁
 
-只接受带稳定 ID、原文定位和当前来源 hash 的需求基线。存在未关闭的高影响问题时停止，并把问题退回 `$index-design-docs`；不得在 spec 中悄悄选择解释。
+接收仓库根目录、外部 trust root、调用方确认的 expected head、签名身份、repository map 和已登记的需求 typed identities。先执行 `deliveryctl validate`，参数必须包含 `--trust-root` 和 `--expected-head`。
 
-先读取总控建立的 Spec 工具 profile。若仓库使用 Spec Kit、OpenSpec、Kiro Specs 或其他工具，直接增强其权威 spec、plan/design 和 tasks，并保留原生 ID、目录及状态；不得另建内容相同的 `SPEC-*` 副本。仅在未选择外部工具时使用本技能模板。
+只接受已登记为 `native` 的 `openspec` 或 `spec-kit` profile。需求来源摘要不匹配、存在高影响开放问题、provider 不受支持，或作者身份缺少 `trace.write`、`state.write` 任一能力时，返回 `BLOCKED`。另需一个具备 `provider.write`、`artifact.write` 且 scope 覆盖 provider 根目录的 `spec-integrator`；不得由作者兼任 integrator 或创建通用规格副本。
 
 ## 工作流
 
-1. 选择一个端到端垂直切片，列出关联 `REQ/NFR/INV/DEC` 和明确非目标。
-2. 读取每个来源引用的原文，而非只读规范化摘要。
-3. 使用已选工具的原生格式编写或修订工件；只有内置回退模式才使用 [spec-template.md](assets/spec-template.md) 编写 `SPEC-*`。
-4. 将行为写成可观察的 Given/When/Then 或等价契约；覆盖正例、反例、边界、失败和非法状态。
-5. 冻结跨 agent 接口：schema、版本、错误模型、幂等、顺序、超时、重试、兼容和责任方。
-6. 对安全、数据完整性、并发、性能、恢复、可观测性、部署/迁移/回滚和兼容逐项标记“适用并量化”或“不适用及理由”。
-7. 把 spec 切成可独立验证的 `TASK-*`，记录依赖、允许/禁止修改范围、完成命令和对应 `TEST-*`。
-8. 更新 `traceability.csv`，确保设计需求与 spec 双向覆盖；禁止无来源的“顺手需求”。
-9. 运行 `python scripts/validate_spec.py <SPEC文件>`。通过后状态只到 `reviewed`，等待用户/负责人明确批准并冻结版本/hash。
+1. 选择一个端到端切片，列出关联需求 typed identities 和明确非目标；沿 trace edges 重读原文。
+2. 仅使用已选 provider 的原生命令和目录编写或修订 spec、design/plan 与 tasks，并保留原生 ID 和状态。
+3. 把行为写成可观察契约，覆盖正例、反例、边界、失败和非法状态。
+4. 冻结 schema、版本、错误模型、幂等、顺序、超时、重试、兼容和责任方。
+5. 对安全、数据完整性、并发、性能、恢复、可观测性、部署、迁移、回滚和兼容逐项量化，或记录不适用理由。
+6. 切分可独立验证的任务，记录依赖、允许和禁止修改范围、完成命令及测试身份。
+7. 运行 provider 原生校验，把候选工件固定到完整 Git commit。校验失败或只有未提交工作树路径时停止，不得用本地宽松检查替代。
+8. 在该 commit 上重新运行 detector；由独立 `spec-integrator` 把完整输出交给 `deliveryctl observe-provider`。不得手工构造 provider authority 或 spec/task 的 `artifact_registered`。用返回 revision 立即执行 `validate` 和 `status`，从已验证状态取得新 spec/task typed identities。
+9. 作者以上一步 revision 为 expected head，只登记 spec/task trace nodes、`requirement specifies spec` 与 `spec derives task` edges；为每个尚无状态的新 task 提交 `state_object_registered(kind=task, initial_state=draft)`。内容未变而只有 provider 运行状态变化时复用原 identity；内容变化产生新 identity，并重新进入 draft/审批流程。
+10. 使用作者签名执行一次 `deliveryctl commit`，随后用返回 revision 立即执行 `validate` 和 `status`。revision 冲突、identity 不在 verified status 中或任一 operation 被拒绝时返回 `BLOCKED`，不得自动重试。
 
-## 可验证性规则
-
-- 禁止“友好、快速、合理、正确处理、支持”等无法判真的表述，除非给出量化判据。
-- 每条验收条件必须包含前置条件、输入/动作、可观察结果及失败判定。
-- 测试不得复制实现算法；关键不变量优先使用属性测试、模型测试或状态机测试。
-- 代码覆盖率只能辅助，需求覆盖率才是门禁。
-- 人工视觉或业务验收可以存在，但必须记录评审对象、判据、批准人和证据路径。
-
-Spec 作者不得批准自己的 spec，也不得开始实现。
+规格作者到此停止。总控必须把新 revision 交给不同的授权审批者；审批者在一个签名 batch 中依次提交 `run_started`、`attempt_started`、task 的 `approval_recorded`、`claim_acquired`、`state_transitioned(draft→approved)` 和 `claim_released`，并立即复验 revision。审批、transition 与 run/attempt 必须绑定同一 task、scope、environment 和 target commit。使用 [review-checklist.md](references/review-checklist.md) 复核并输出规格与任务 typed identities、审批状态和未决阻断项。Spec 作者不得批准自己的工件或开始实现。

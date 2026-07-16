@@ -1,1 +1,0 @@
-{"role":"orchestrator","allowed_paths":[".delivery"],"writes":[{"path":".delivery/state.json","artifact_type":"state","parent_kind":"brownfield","actor_run_kind":"greenfield"}]}

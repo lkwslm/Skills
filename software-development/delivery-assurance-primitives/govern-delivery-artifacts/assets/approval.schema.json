@@ -1,8 +1,0 @@
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "approval.schema.json",
-  "type": "object",
-  "required": ["approvals"],
-  "additionalProperties": false,
-  "properties": {"approvals": {"type": "array", "items": {"type": "object", "required": ["approval_id", "object_id", "object_version", "content_hash", "approver", "authority", "approved_at", "scope", "decision"], "additionalProperties": false, "properties": {"approval_id": {"type": "string", "minLength": 1}, "object_id": {"type": "string", "minLength": 1}, "object_version": {"type": "string", "minLength": 1}, "content_hash": {"type": "string", "minLength": 8}, "approver": {"type": "string", "minLength": 1}, "authority": {"type": "string", "minLength": 1}, "approved_at": {"type": "string", "format": "date-time"}, "scope": {"type": "array", "minItems": 1, "items": {"type": "string"}}, "decision": {"type": "string", "enum": ["APPROVED", "REJECTED", "RISK_ACCEPTED"]}, "expires_at": {"type": ["string", "null"], "format": "date-time"}}}}}
-}
