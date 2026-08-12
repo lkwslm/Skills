@@ -1,0 +1,4 @@
+interface:
+  display_name: "带我学"
+  short_description: "以引导式推导组织概念、课程、自测、复习与项目设计拆解"
+  default_prompt: "Use $learn-with-me to guide me through a topic from first principles."

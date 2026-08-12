@@ -1,0 +1,4 @@
+interface:
+  display_name: "接着学"
+  short_description: "校验学习档案状态并恢复检查点、未决问题与下一步课程安排"
+  default_prompt: "Use $continue-learning to resume the learning archive in this workspace."

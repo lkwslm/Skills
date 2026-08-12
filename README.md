@@ -1,6 +1,6 @@
-# System Delivery Skill Suites
+# Skills
 
-本仓库提供一组面向 Codex/AI agent 的系统交付 Skills，用版本化工件、状态机、权限边界、双向追溯和可复核证据约束软件交付过程。
+本仓库提供面向 Codex/AI agent 的系统交付与结构化学习 Skills。系统交付套件用版本化工件、状态机、权限边界、双向追溯和可复核证据约束软件交付过程；学习套件用概念依赖、引导式推导、结构化课程与可恢复档案组织长期学习。
 
 它解决两类不同问题：
 
@@ -19,6 +19,8 @@
 | 从长篇设计分解规格并逐任务实现、审计 | `$orchestrate-spec-delivery` | 用原生 OpenSpec/Spec Kit 与签名 `.delivery` 账本记录需求、规格、任务和进度 |
 | 只初始化、恢复或审计 `.delivery/` 工件 | `$govern-delivery-artifacts` | 运行状态、审批、权限、追溯、陈旧传播和证据门禁 |
 | 只探测仓库已有的 Spec 工具 | `$integrate-spec-toolchain` | 严格识别原生 OpenSpec 或 Spec Kit；缺失、冲突或未固定运行时均 fail closed |
+| 从基础概念系统学习一个主题或彻底拆解项目 | `$learn-with-me` | 校准起点，逐层推导，生成课程 HTML、概念图、自测和周期回顾 |
+| 从当前工作区恢复上次学习 | `$continue-learning` | 校验 `study/` 档案、恢复检查点与未决问题，并给出唯一下一步 |
 
 不要同时启动两个可写总控。混合流程必须由 `$orchestrate-production-change` 持有父变更、迁移、发布和最终状态。
 
@@ -34,13 +36,15 @@
    根据 docs/design/ 下的已批准设计开始新系统交付。
    ```
 
-2. 需要全局使用时，将以下四个目录下的 21 个 Skill 子目录分别安装到 `$CODEX_HOME/skills/`；未设置 `CODEX_HOME` 时使用 `~/.codex/skills/`：
+2. 需要全局使用时，将以下目录下的 23 个 Skill 子目录分别安装到 `$CODEX_HOME/skills/`；未设置 `CODEX_HOME` 时使用 `~/.codex/skills/`：
 
    ```text
    software-development/design-to-system-realization/
    software-development/design-to-verified-implementation/
    software-development/production-change-to-verified-release/
    software-development/delivery-assurance-primitives/
+   study/learn-with-me/
+   study/continue-learning/
    ```
 
 安装时保持每个 Skill 目录名不变，并避免覆盖同名目录中的本地修改。重新启动或刷新 Codex 会话后，通过 `$skill-name` 调用。
@@ -48,6 +52,33 @@
 Windows checkout 需要让 Git 支持长路径（例如 `git config --global core.longpaths true`），或把仓库放在较短的根目录；签名 generation 与 content-addressed blob 的文件名不能截断或改写。
 
 ## 推荐使用方式
+
+### 引导式系统学习
+
+新主题入口示例：
+
+```text
+使用 $learn-with-me 带我系统学习订单系统设计。
+从问题与目标开始，逐层推导到数据、流程、设计选择、代码和测试，
+并把课程与概念图保存到当前工作区的 study/。
+```
+
+恢复入口示例：
+
+```text
+使用 $continue-learning 接着上次的内容。
+```
+
+标准协作：
+
+```text
+learn-with-me
+  → 新主题：起点校准 → 当前学习路径 → 引导式推导 → 五题自测 → 用户确认
+  → 既有主题：continue-learning → 恢复检查点 → 继续当前单元
+  → 每完成十个普通单元：加权综合回顾 → 下一普通单元
+```
+
+每个学习主题默认使用一个独立工作区，具体材料写入该工作区根目录的 `study/`。本仓库的 `study/` 保存 skill 本体，不是某个主题的学习档案。
 
 ### 新系统整体实现
 
@@ -107,7 +138,14 @@ orchestrate-spec-delivery
 
 该流程适合像本仓库一样由设计驱动、同时需要让 OpenSpec 结果与 `.delivery` 状态对齐的项目。Provider 负责可编辑的 spec/task 正文；账本记录固定身份、审批、claim、生命周期和证据。
 
-## 21 个 Skills 的用途
+## Skills 的用途
+
+### 结构化学习
+
+| Skill | 何时使用 | 主要结果 |
+|---|---|---|
+| `learn-with-me` | 系统学习知识主题、从第一性原理推导概念、目标驱动拆解项目或比较替代设计 | 学习契约、概念记录与依赖图、当前路径、自包含课程 HTML、五题自测与周期回顾 |
+| `continue-learning` | 恢复中断学习，或由 `learn-with-me` 读取既有主题 | 经校验的运行状态、当前检查点、未决问题、必要修复和下一步交接 |
 
 ### 共享治理与工具集成
 

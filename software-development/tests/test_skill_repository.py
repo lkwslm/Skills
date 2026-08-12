@@ -17,7 +17,8 @@ MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 
 
 def skill_documents() -> list[Path]:
-    return sorted((ROOT / "software-development").glob("**/SKILL.md"))
+    roots = (ROOT / "software-development", ROOT / "study")
+    return sorted(path for root in roots for path in root.glob("**/SKILL.md"))
 
 
 def frontmatter(path: Path) -> tuple[dict, str]:
@@ -45,7 +46,7 @@ class SkillRepositoryTest(unittest.TestCase):
                 self.assertLessEqual(len(body.splitlines()), 500)
                 names.append(metadata["name"])
         self.assertEqual(len(names), len(set(names)))
-        self.assertEqual(len(names), 21)
+        self.assertEqual(len(names), 23)
 
     def test_skill_local_markdown_links_resolve(self) -> None:
         for path in skill_documents():
@@ -69,6 +70,29 @@ class SkillRepositoryTest(unittest.TestCase):
                 )
                 self.assertTrue(all(isinstance(item, str) and item.strip() for item in interface.values()))
                 self.assertIn("$" + path.parent.name, interface["default_prompt"])
+
+    def test_guided_learning_suite_contract_is_bundled(self) -> None:
+        suite = ROOT / "study"
+        learn = suite / "learn-with-me"
+        resume = suite / "continue-learning"
+        template = learn / "assets" / "course-template.html"
+        state_template = resume / "assets" / "state-template.yaml"
+
+        self.assertTrue(template.is_file())
+        html = template.read_text(encoding="utf-8")
+        self.assertIn('data-lesson-status="draft"', html)
+        self.assertIn('id="quiz"', html)
+        self.assertIn("questions.length !== 5", html)
+        self.assertNotRegex(html, r'<(?:script|link)[^>]+(?:src|href)=["\']https?://')
+
+        state = yaml.safe_load(state_template.read_text(encoding="utf-8"))
+        self.assertEqual(state["schema_version"], 1)
+        self.assertEqual(state["active"]["kind"], "none")
+        self.assertEqual(state["progress"]["next_review_after"], 10)
+
+        learn_text = (learn / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("../continue-learning/references/learning-archive-contract.md", learn_text)
+        self.assertIn("$continue-learning", learn_text)
 
     def test_self_hosted_delivery_locator_and_sidecar_are_publishable(self) -> None:
         descriptor = json.loads((ROOT / ".delivery-project.json").read_text(encoding="utf-8"))
