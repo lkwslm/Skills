@@ -1,0 +1,18 @@
+schema_version: 1
+topic: ""
+updated_at: ""
+active:
+  kind: none
+  number: null
+  status: null
+  file: null
+  path_position: null
+  checkpoint: null
+  unresolved_questions: []
+progress:
+  completed_units: 0
+  completed_reviews: 0
+  review_due: false
+  next_review_after: 10
+  last_completed_unit: null
+  last_completed_review: null

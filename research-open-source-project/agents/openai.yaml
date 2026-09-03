@@ -1,0 +1,4 @@
+interface:
+  display_name: "开源项目调研"
+  short_description: "基于一手资料解释单个开源项目如何工作，并判断它与具体需求的适配性"
+  default_prompt: "使用 $research-open-source-project 调研这个开源项目如何工作，并根据我的需求画像判断适配性。"
