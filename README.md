@@ -107,6 +107,32 @@ orchestrate-spec-delivery
 
 该流程适合像本仓库一样由设计驱动、同时需要让 OpenSpec 结果与 `.delivery` 状态对齐的项目。Provider 负责可编辑的 spec/task 正文；账本记录固定身份、审批、claim、生命周期和证据。
 
+### 开源项目调研流水线
+
+这条链路以 Markdown 工件连接用户输入、独立 subagent 和最终汇总：
+
+```text
+open-source-research
+  → open-source-research-brief
+  → open-source-research-discovery（最多 20 个候选）
+  → open-source-research-screening（独立 subagent 初筛）
+  → open-source-research-project（最多 10 个项目）
+  → open-source-research-summary
+```
+
+各阶段职责：
+
+| Skill | 作用 | 主要产物 |
+|---|---|---|
+| `open-source-research` | 唯一用户入口，只负责识别状态和调度 | 调度结果 |
+| `open-source-research-brief` | 通过逐题对齐生成并确认需求基准 | `research-brief.md` |
+| `open-source-research-discovery` | 按 brief 和搜索偏好发现候选项目 | `candidate-discovery.md` |
+| `open-source-research-screening` | 每个项目独立判断是否值得深度调研 | `screening/<项目>.md` |
+| `open-source-research-project` | 独立输出单项目完整调研报告 | `research-report/<项目>.md` |
+| `open-source-research-summary` | 以项目为主、方案为辅组织最终报告 | `research-summary.md` |
+
+文档统一放在 `docs/open-source-research/<主题>/`。brief 在用户正式允许调查后变为 `confirmed 1.0`，下游 subagent 只读；入口只调度，不撰写研究内容。初筛和深度调研 subagent 不互相读取判断，也不得继续派生 subagent。
+
 ## 21 个 Skills 的用途
 
 ### 共享治理与工具集成

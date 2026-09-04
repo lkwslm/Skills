@@ -1,0 +1,4 @@
+interface:
+  display_name: "开源调研输入对齐"
+  short_description: "建立并确认用户可编辑的 research brief"
+  default_prompt: "使用 $open-source-research-brief，对齐开源项目调研需求并生成 research-brief.md。"

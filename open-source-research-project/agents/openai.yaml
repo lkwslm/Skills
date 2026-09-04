@@ -1,0 +1,4 @@
+interface:
+  display_name: "开源项目深度调研"
+  short_description: "独立输出单个开源项目的完整适配调研报告"
+  default_prompt: "使用 $open-source-research-project，根据 confirmed 1.0 的 brief 独立调研这个开源项目。"

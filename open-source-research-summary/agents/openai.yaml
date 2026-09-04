@@ -1,0 +1,4 @@
+interface:
+  display_name: "开源项目调研汇总"
+  short_description: "把多个项目报告组织成项目为主、方案为辅的汇总报告"
+  default_prompt: "使用 $open-source-research-summary，汇总现有开源项目调研报告并整理出实施边界。"

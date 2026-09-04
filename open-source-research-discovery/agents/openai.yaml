@@ -1,0 +1,4 @@
+interface:
+  display_name: "开源项目候选发现"
+  short_description: "按 research brief 发现最多 20 个候选项目"
+  default_prompt: "使用 $open-source-research-discovery，根据 confirmed 1.0 的 brief 发现候选开源项目。"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "开源项目调研入口"
+  short_description: "调度需求对齐、候选发现、项目初筛、深度调研和结果汇总"
+  default_prompt: "使用 $open-source-research，根据当前需求和已有调研文档路由到正确的开源项目调研阶段。"
